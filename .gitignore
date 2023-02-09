@@ -1,0 +1,13 @@
+.venv/
+venv/
+.mypy_cache
+__pycache__
+*egg-info
+data/
+requirements.lock
+config.ini
+/figures
+.ipynb_checkpoints/
+.coverage*
+.tox
+.vscode

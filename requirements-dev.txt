@@ -1,0 +1,16 @@
+# Transitively include runtime requirements
+-r requirements.txt
+
+# Requirements for dev environment only
+black
+build
+covdefaults
+coverage
+flake8
+isort
+mypy
+pre-commit
+pytest
+tox
+types-setuptools
+types-requests

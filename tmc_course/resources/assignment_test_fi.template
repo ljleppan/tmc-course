@@ -1,0 +1,28 @@
+import unittest
+
+from tmc import points
+from tmc.utils import load_module, load, check_source
+
+exercise = "src.ASSIGNMENTMODULE"
+
+
+@points("POINTNAME")
+class TESTNAME(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.module = load_module(exercise, "fi")
+
+    def test_0_paaohjelma_kunnossa(self):
+        ok, line = check_source(self.module)
+        self.assertTrue(
+            ok,
+            f'Funktioita testaava koodi tulee sijoittaa lohkon\nif __name__ == "__main__":\nsisälle. Seuraava rivi tulee siirtää:\n{line}',
+        )
+
+    def test_1(self):
+        funktio = load(exercise, "funktio", "fi")
+        self.assertEquals(1, funktio(), "Funktion 'funktio' tulisi palauttaa arvo 1")
+
+
+if __name__ == "__main__":
+    unittest.main()

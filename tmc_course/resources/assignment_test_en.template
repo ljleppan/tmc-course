@@ -1,0 +1,30 @@
+import unittest
+
+from tmc import points
+from tmc.utils import load_module, load, check_source
+
+exercise = "src.ASSIGNMENTMODULE"
+
+
+@points("POINTNAME")
+class TESTNAME(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.module = load_module(exercise, "fi")
+
+    def test_0_main_ok(self):
+        ok, line = check_source(self.module)
+        self.assertTrue(
+            ok,
+            f'Extra code for testing should reside within the \nif __name__ == "__main__":\nblock. The following line must be moved:\n{line}',
+        )
+
+    def test_1(self):
+        funktio = load(exercise, "funktio", "fi")
+        self.assertEquals(
+            1, funktio(), "The function 'function' should return the value 1"
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
