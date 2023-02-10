@@ -428,12 +428,12 @@ def main(argv: list[str] | None = None) -> int:
                     init_part(Path(args.course_path), part)
             elif args.init_action == "assignment":
                 language: Literal["fi", "en"] = "fi" if args.finnish else "en"
-                for assignment in args.assignments:
+                for assignment in args.assignment:
                     init_assignment(
                         Path(args.course_path), args.part, assignment, language
                     )
         if args.action == "test":
-            if args.part and args.assignments:
+            if args.part and args.assignment:
                 test_assignment(args.course_path, args.part, args.assignment)
             elif args.part:
                 test_part(args.course_path, args.part)
