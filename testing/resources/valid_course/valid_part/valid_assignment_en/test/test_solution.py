@@ -6,7 +6,7 @@ from tmc.utils import check_source, load, load_module
 exercise = "src.solution"
 
 
-@points("POINTNAME")
+@points("valid_assignment_en")
 class SolutionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

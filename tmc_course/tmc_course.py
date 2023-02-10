@@ -117,6 +117,9 @@ def assert_valid_part(course_path: Path, part_name: str) -> None:
 
 
 def create_src_skeleton(assignment_path: Path, language: Literal["en", "fi"]) -> None:
+    if language not in ("fi", "en"):
+        raise ValueError("Language must be 'fi' or 'en'")
+
     logging.debug(f'Creating " {assignment_path / "src"}')
     (assignment_path / "src").mkdir(exist_ok=True)
 
@@ -128,13 +131,11 @@ def create_src_skeleton(assignment_path: Path, language: Literal["en", "fi"]) ->
             SkeletonFile.ASSIGNMENT_SOLUTION_EN,
             assignment_path / "src" / "solution.py",
         )
-    elif language == "fi":
+    else:
         add_skeleton_file(
             SkeletonFile.ASSIGNMENT_SOLUTION_FI,
             assignment_path / "src" / "ratkaisu.py",
         )
-    else:
-        raise ValueError("Language must be 'fi' or 'en'")
 
 
 def create_test_skeleton(
@@ -158,11 +159,10 @@ def create_test_skeleton(
     logging.debug("Inserting assignment name into test file")
     with test_file_path.open("r") as fh:
         file_contents = fh.read()
-    file_contents.replace("ASSIGNMENTMODULE", assignment_name)
-    file_contents.replace("POINTNAME", assignment_name)
-    file_contents.replace("TESTNAME", f"{assignment_name.capitalize}Test")
+    file_contents = file_contents.replace("POINTNAME", assignment_name)
     with test_file_path.open("w") as fh:
         fh.write(file_contents)
+    logging.debug("Test skeleton complete")
 
 
 def download_tmc_python_tester(course_path: Path, update: bool) -> None:
