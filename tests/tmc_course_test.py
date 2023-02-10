@@ -1,6 +1,8 @@
+import filecmp
 from unittest.mock import patch
 
 import pytest
+import responses
 
 from tmc_course import tmc_course
 
@@ -241,3 +243,37 @@ def test_create_test_skeleton_en(tmp_path, test_resource_dir):
 def test_create_test_skeleton_invalid_language(tmp_path):
     with pytest.raises(ValueError):
         tmc_course.create_test_skeleton(tmp_path, "solution", "nosuchlanguage")
+
+
+@responses.activate
+def test_download_tmc_python_tester(test_resource_dir, tmp_path):
+    url = (
+        "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
+    )
+    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    with zip_resource.open("rb") as zip_handle:
+        responses.get(url=url, body=zip_handle.read())
+        tmc_course.download_tmc_python_tester(tmp_path, update=True)
+    responses.assert_call_count(url, 1)
+    assert filecmp.cmp(zip_resource, tmp_path / "tmc-python-tester.zip")
+
+
+def test_download_tmc_python_tester_skips_no_update(tmp_path):
+    with patch.object(tmc_course, "requests") as mock:
+        (tmp_path / "tmc-python-tester.zip").touch()
+        tmc_course.download_tmc_python_tester(tmp_path, update=False)
+        mock.assert_not_called()
+
+
+@responses.activate
+def test_download_tmc_python_tester_updates(test_resource_dir, tmp_path):
+    url = (
+        "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
+    )
+    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    zip_resource.touch()
+    with zip_resource.open("rb") as zip_handle:
+        responses.get(url=url, body=zip_handle.read())
+        tmc_course.download_tmc_python_tester(tmp_path, update=True)
+    responses.assert_call_count(url, 1)
+    assert filecmp.cmp(zip_resource, tmp_path / "tmc-python-tester.zip")
