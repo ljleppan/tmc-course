@@ -1,7 +1,3 @@
-# Transitively include runtime requirements
--r requirements.txt
-
-# Requirements for dev environment only
 black
 build
 covdefaults
@@ -14,3 +10,4 @@ pytest
 tox
 types-setuptools
 types-requests
+wheel

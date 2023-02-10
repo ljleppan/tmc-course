@@ -11,3 +11,4 @@ config.ini
 .coverage*
 .tox
 .vscode
+build/

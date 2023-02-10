@@ -1,5 +1,8 @@
+import argparse
+import importlib.resources
 import logging
 import shutil
+import subprocess
 import zipfile
 from enum import Enum, auto
 from pathlib import Path
@@ -7,13 +10,12 @@ from typing import Literal
 
 import requests
 
-RESOURCE_PATH = Path(__file__).parent / "resources"
 TMC_PYTHON_TESTER_ZIP_URL = (
     "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
 )
 
 
-class UserExitException(BaseException):
+class ActionCancelledException(BaseException):
     pass
 
 
@@ -27,20 +29,33 @@ class SkeletonFile(Enum):
     ASSIGNMENT_TEST_FI = auto()
 
 
-def check_from_user(message: str, quit_on_y: bool = False) -> None:
-    suffix = "[Yn]" if quit_on_y else "[yN]"
+def check_from_user(
+    message: str, quit_default: bool = True, continue_on_y: bool = True
+) -> None:
+    quit_char = "n" if continue_on_y else "y"
+    continue_char = "y" if continue_on_y else "n"
+    suffix = "["
+    suffix += continue_char if quit_default else continue_char.upper()
+    suffix += quit_char.upper() if quit_default else quit_char
+    suffix += "]"
+
     print(message + " " + suffix)
-    response = input("> ")
-    if response.casefold() == "y" and quit_on_y:
-        raise UserExitException
-    elif response.casefold() == "n" or quit_on_y:
-        raise UserExitException
+
+    response = input("> ").casefold()
+    if response == quit_char:
+        raise ActionCancelledException
+    elif response != continue_char and quit_default:
+        raise ActionCancelledException
 
 
 def add_skeleton_file(skeleton_file: SkeletonFile, path: Path) -> None:
     logging.debug(f"Copying resource {skeleton_file.name} to {path}")
     template_file_name = skeleton_file.name.casefold() + ".template"
-    shutil.copy(RESOURCE_PATH / template_file_name, path)
+    resource_path = importlib.resources.files("tmc_course.resources").joinpath(
+        template_file_name
+    )
+    logging.debug(f"Template file path is {resource_path}")
+    shutil.copy(Path(str(resource_path)), path)
 
 
 def init_course(course_path: Path) -> None:
@@ -65,6 +80,8 @@ def init_course(course_path: Path) -> None:
 def assert_valid_course(course_path: Path) -> None:
     if not course_path.exists():
         raise ValueError("Course root directory does not exist")
+    if not course_path.is_dir():
+        raise ValueError("Course root is not a directory")
     if not any(
         filepath.name == ".tmcproject.yml" for filepath in course_path.iterdir()
     ):
@@ -94,6 +111,8 @@ def init_part(course_path: Path, part_name: str) -> None:
 def assert_valid_part(course_path: Path, part_name: str) -> None:
     if not (course_path / part_name).exists():
         raise ValueError(f"Part {part_name} does not exist")
+    if not (course_path / part_name).is_dir():
+        raise ValueError(f"{course_path / part_name} is not a directory")
     logging.debug(f"{course_path / part_name} is a valid course part")
 
 
@@ -209,6 +228,21 @@ def init_assignment(
     create_tmc_dir(assignment_path)
 
 
+def assert_valid_assignment(assignment_path: Path) -> None:
+    if not assignment_path.exists():
+        raise ValueError(f"Assignment {assignment_path} does not exist")
+    if not assignment_path.is_dir():
+        raise ValueError("Assignment {assignment_path} is not a directory")
+    logging.debug(f"{assignment_path} is a valid course part")
+    if not any(
+        filepath.name == ".tmcproject.yml" for filepath in assignment_path.iterdir()
+    ):
+        raise ValueError(
+            "{assignment_path} is not a TMC assignment (missing .tmcproject.yml)"
+        )
+    logging.debug(f"{assignment_path} is a valid TMC course")
+
+
 def update_course(course_path: Path) -> None:
     logging.info(f"Updating TMC-python-tester for course {course_path}")
     download_tmc_python_tester(course_path, update=True)
@@ -233,16 +267,186 @@ def update_course(course_path: Path) -> None:
 
 
 def test_course(course_path: Path) -> None:
-    raise NotImplementedError
+    logging.info(f"Running tests for course {course_path}")
+    assert_valid_course(course_path)
+
+    assignments: list[Path] = []
+    for maybe_part in course_path.iterdir():
+        try:
+            assert_valid_part(course_path, maybe_part.name)
+        except ValueError:
+            continue
+        for maybe_assignment in maybe_part.iterdir():
+            try:
+                assert_valid_assignment(maybe_assignment)
+            except ValueError:
+                continue
+            assignments.append(maybe_assignment)
+    run_tests(assignments)
 
 
 def test_part(course_path: Path, part_name: str) -> None:
-    raise NotImplementedError
+    assert_valid_course(course_path)
+    assert_valid_part(course_path, part_name)
+    part_path = course_path / part_name
+
+    assignments: list[Path] = []
+    for maybe_assignment in part_path.iterdir():
+        try:
+            assert_valid_assignment(maybe_assignment)
+        except ValueError:
+            pass
+        assignments.append(maybe_assignment)
+    run_tests(assignments)
 
 
 def test_assignment(course_path: Path, part_name: str, assignment_name: str) -> None:
-    raise NotImplementedError
+    assert_valid_course(course_path)
+    assert_valid_part(course_path, part_name)
+    assert_valid_assignment(course_path / part_name / assignment_name)
+
+    run_tests([course_path / part_name / assignment_name])
+
+
+def run_tests(assignment_paths: list[Path]) -> None:
+    results: dict[Path, tuple[int, str, str]] = {}
+    for assignment in assignment_paths:
+        results[assignment] = run_test(assignment)
+    if all(r[0] == 0 for r in results.values()):
+        logging.info("All tests passed")
+    else:
+        logging.warning("Following tests failed:")
+        for assignment, (status, stdout, stderr) in results.items():
+            if status != 0:
+                logging.warning(f"{assignment}: status code {status}")
+                logging.info(f"STDOUT:\n{stdout}")
+                logging.info(f"STDERR:\n{stderr}")
+                logging.info("--------")
+
+
+def run_test(assignment_path: Path) -> tuple[int, str, str]:
+    result = subprocess.run(["python3", "-m", "tmc"], cwd=assignment_path)
+    logging.info(
+        f"{assignment_path}: {'SUCCESS' if result.returncode == 0 else 'FAIL'}"
+    )
+    return result.returncode, str(result.stdout), str(result.stderr)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        "tmc-course",
+        description="Helper for building TestMyCode python programming courses",
+    )
+
+    verbosity_grp = parser.add_mutually_exclusive_group()
+    verbosity_grp.add_argument(
+        "--quiet", action="store_true", help="Only output warning"
+    )
+    verbosity_grp.add_argument(
+        "--verbose", action="store_true", help="Output debugging information"
+    )
+
+    actions = parser.add_subparsers(
+        dest="action",
+        required=True,
+        metavar="ACTION",
+    )
+
+    # INIT
+    init_grp = actions.add_parser(
+        "init", help="Initialize a new course, part or assignment"
+    )
+    init_actions = init_grp.add_subparsers(
+        dest="init_action", required=True, metavar="TYPE"
+    )
+
+    # INIT COURSE
+    init_course_grp = init_actions.add_parser("course", help="Initialize a new course")
+    init_course_grp.add_argument(
+        "course_path", type=str, help="Course root directory (should not exist)"
+    )
+
+    # INIT PART
+    init_part_grp = init_actions.add_parser("part", help="Initialize a new course part")
+    init_part_grp.add_argument("course_path", type=str, help="Course root directory")
+    init_part_grp.add_argument(
+        "part", type=str, nargs="+", help="Name(s) of part(s) to initialize"
+    )
+
+    # INIT ASSIGNMENT
+    init_assignment_grp = init_actions.add_parser(
+        "assignment", help="Initialize a assignment"
+    )
+    init_assignment_grp.add_argument(
+        "course_path", type=str, help="Course root directory"
+    )
+    init_assignment_grp.add_argument(
+        "part", type=str, help="Name of part assignment(s) belong to"
+    )
+    init_assignment_grp.add_argument(
+        "assignment", type=str, nargs="+", help="Name(s) of assignment(s) to initialize"
+    )
+    language_grp = init_assignment_grp.add_mutually_exclusive_group(required=True)
+    language_grp.add_argument(
+        "-e", "--english", action="store_true", help="Use English language templates"
+    )
+    language_grp.add_argument(
+        "-f", "--finnish", action="store_true", help="Use Finnish language templates"
+    )
+
+    # TEST
+    test_grp = actions.add_parser("test", help="Test a new course, part or assignment")
+    test_grp.add_argument("course_path", type=str, help="Course root directory")
+    test_grp.add_argument("part", type=str, help="Name of part")
+    test_grp.add_argument("assignment", type=str, help="Name of assignment")
+
+    # UPDATE
+    update_grp = actions.add_parser(
+        "update", help="Update TMC-python-runner embedded in assignments"
+    )
+    update_grp.add_argument("course_path", type=str, help="Course root directory")
+
+    # Verbosity control
+    args = parser.parse_args(argv)
+    if not (args.quiet or args.verbose):
+        logging.basicConfig(format="%(message)s", level=logging.INFO)
+    if args.quiet:
+        logging.basicConfig(format="%(message)s", level=logging.WARNING)
+    if args.verbose:
+        logging.basicConfig(
+            format="%(levelname)s:%(asctime)s: %(message)s", level=logging.DEBUG
+        )
+
+    logging.error(args)
+
+    try:
+        if args.action == "init":
+            if args.init_action == "course":
+                init_course(Path(args.course_path))
+            elif args.init_action == "part":
+                for part in args.part:
+                    init_part(Path(args.course_path), part)
+            elif args.init_action == "assignment":
+                language: Literal["fi", "en"] = "fi" if args.finnish else "en"
+                for assignment in args.assignments:
+                    init_assignment(
+                        Path(args.course_path), args.part, assignment, language
+                    )
+        if args.action == "test":
+            if args.part and args.assignments:
+                test_assignment(args.course_path, args.part, args.assignment)
+            elif args.part:
+                test_part(args.course_path, args.part)
+            else:
+                test_course(args.course_path)
+        if args.action == "update":
+            update_course(args.course_path)
+    except ActionCancelledException:
+        print("OK, quitting")
+        return 1
+
+    return 0
 
 
 if __name__ == "__main__":
-    create_tmc_dir(Path(__file__).parent.parent / "example_course")
+    raise SystemExit(main())

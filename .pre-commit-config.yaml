@@ -17,9 +17,8 @@ repos:
     rev: v1.0.0
     hooks:
     -   id: mypy
-        exclude: .venv/
-        # --implicit-reexport required by gitpython
-        args: [--strict, --implicit-reexport]
+        args: [--strict]
+        exclude: ^venv/|^tests/|^testing/
         additional_dependencies: [types-requests==2.28.11.7, types-setuptools==65.6.0.3, responses==0.22.0, pytest==7.2.0]
 -   repo: https://github.com/PyCQA/flake8
     rev: 6.0.0
