@@ -43,8 +43,11 @@ exclude = [
 [tool.setuptools.package-data]
 tmc_course = ["*.template"]
 
-
 [tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "testing",
+]
 addopts = "--ignore=testing/resources"
 
 [tool.coverage.run]

@@ -1,5 +1,6 @@
 import filecmp
-from unittest.mock import patch
+import logging
+from unittest.mock import ANY, call, patch
 
 import pytest
 import responses
@@ -397,6 +398,10 @@ def test_update_course(tmp_course, test_resource_dir):
         tmc_course.init_assignment(tmp_course, "part02", "valid_assignment_fi", "fi")
         tmc_course.init_assignment(tmp_course, "part02", "valid_assignment_en", "en")
 
+    # add non-assignment dir
+    (tmp_course / "part01" / "utils" / "src").mkdir(parents=True)
+    (tmp_course / "part01" / "utils" / "src" / "file.txt").touch()
+
     # modify /tmc/
     (tmp_course / "part01" / "valid_assignment_fi" / "tmc" / "hmac_writer.py").unlink()
     (tmp_course / "part01" / "valid_assignment_en" / "tmc" / "runner.py").unlink()
@@ -470,3 +475,90 @@ def test_update_course(tmp_course, test_resource_dir):
     assert (
         tmp_course / "part01" / "assg03" / "test" / "test_solution.py"
     ).read_text() == "TEST DATA"
+
+    # Didn't touch the util dir
+    assert len(list((tmp_course / "part01" / "utils" / "src").iterdir())) == 1
+    assert len(list((tmp_course / "part01" / "utils").iterdir())) == 1
+
+
+def test_main_init_course(tmp_path):
+    course_paths = [tmp_path / "NewCourse1", tmp_path / "NewCourse2"]
+    with patch.object(tmc_course, "init_course") as mock:
+        tmc_course.main(["init", "course", str(course_paths[0]), str(course_paths[1])])
+        mock.assert_has_calls(
+            [
+                call(course_paths[0]),
+                call(course_paths[1]),
+            ],
+            any_order=True,
+        )
+
+
+def test_main_init_part(tmp_course):
+    part_paths = [tmp_course / "part01", tmp_course / "part02"]
+    with patch.object(tmc_course, "init_part") as mock:
+        tmc_course.main(["init", "part", str(part_paths[0]), str(part_paths[1])])
+        mock.assert_has_calls(
+            [
+                call(tmp_course, "part01"),
+                call(tmp_course, "part02"),
+            ],
+            any_order=True,
+        )
+
+
+def test_main_init_assignment(tmp_course):
+    assg_paths = [tmp_course / "part01" / "assg1", tmp_course / "part01" / "assg2"]
+    with patch.object(tmc_course, "init_assignment") as mock:
+        tmc_course.main(
+            ["init", "assignment", str(assg_paths[0]), str(assg_paths[1]), "-f"]
+        )
+        mock.assert_has_calls(
+            [
+                call(tmp_course, "part01", "assg1", "fi"),
+                call(tmp_course, "part01", "assg2", "fi"),
+            ],
+            any_order=True,
+        )
+
+
+def test_main_init_assignment_en(tmp_course):
+    assg_paths = [tmp_course / "part01" / "assg1", tmp_course / "part01" / "assg2"]
+    with patch.object(tmc_course, "init_assignment") as mock:
+        tmc_course.main(
+            ["init", "assignment", str(assg_paths[0]), str(assg_paths[1]), "-e"]
+        )
+        mock.assert_has_calls(
+            [
+                call(tmp_course, "part01", "assg1", "en"),
+                call(tmp_course, "part01", "assg2", "en"),
+            ],
+            any_order=True,
+        )
+
+
+def test_main_update(tmp_course):
+    with patch.object(tmc_course, "update_course") as mock:
+        tmc_course.main(["update", str(tmp_course)])
+        mock.assert_called_once_with(tmp_course)
+
+
+def test_verbosity_quiet():
+    with patch.object(tmc_course, "update_course"):
+        with patch.object(tmc_course.logging, "basicConfig") as mock_logging:
+            tmc_course.main(["--quiet", "update", "nosuchcourse"])
+            mock_logging.assert_called_once_with(format=ANY, level=logging.WARNING)
+
+
+def test_verbosity_normal():
+    with patch.object(tmc_course, "update_course"):
+        with patch.object(tmc_course.logging, "basicConfig") as mock_logging:
+            tmc_course.main(["update", "nosuchcourse"])
+            mock_logging.assert_called_once_with(format=ANY, level=logging.INFO)
+
+
+def test_verbosity_verbose():
+    with patch.object(tmc_course, "update_course"):
+        with patch.object(tmc_course.logging, "basicConfig") as mock_logging:
+            tmc_course.main(["--verbose", "update", "nosuchcourse"])
+            mock_logging.assert_called_once_with(format=ANY, level=logging.DEBUG)

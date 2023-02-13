@@ -365,7 +365,7 @@ def main(argv: list[str] | None = None) -> int:
     update_grp = actions.add_parser(
         "update", help="Update TMC-python-runner embedded in assignments"
     )
-    update_grp.add_argument("Path", type=str, help="Course root directory")
+    update_grp.add_argument("path", type=str, help="Course root directory")
 
     # Verbosity control
     args = parser.parse_args(argv)
@@ -382,14 +382,14 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.action == "init":
-            paths = (Path(path) for path in args.paths)
+            paths = (Path(path) for path in args.path)
             if args.init_action == "course":
                 for path in paths:
                     init_course(path)
             elif args.init_action == "part":
                 for path in paths:
                     init_part(path.parent, path.name)
-            elif args.init_action == "assignment":
+            else:  # args.init_action == "assignment"
                 language: Literal["fi", "en"] = "fi" if args.finnish else "en"
                 for path in paths:
                     init_assignment(
