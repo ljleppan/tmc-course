@@ -5,7 +5,7 @@
 - [x] `init course`
 - [x] `init part`
 - [x] `init assignment`
-- [ ] `update`
+- [x] `update`
 - [ ] `test`
 - [ ] Support Windows
 
