@@ -7,7 +7,7 @@ import subprocess
 import zipfile
 from enum import Enum, auto
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
 import requests
 
@@ -297,7 +297,7 @@ def run_test_single(assignment_path: Path) -> tuple[int, str, str]:
     return result.returncode, str(result.stdout), str(result.stderr)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         "tmc-course",
         description="Helper for building TestMyCode python programming courses",

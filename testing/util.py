@@ -1,5 +1,6 @@
 import filecmp
 from pathlib import Path
+from typing import Optional
 
 
 def test_resource_dir() -> Path:
@@ -7,7 +8,7 @@ def test_resource_dir() -> Path:
 
 
 def assert_dir_equals(
-    expected_path: Path, actual_path: Path, ignore: list[str] | None = None
+    expected_path: Path, actual_path: Path, ignore: Optional[list[str]] = None
 ) -> None:
     # filecmp.dircmp is silly and only checks the os.stat() signature, which means it
     # ignores contents but enforces modification time. This means both a risk of
