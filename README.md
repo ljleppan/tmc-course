@@ -1,5 +1,5 @@
 # TMC Course creation helper
-![linux](https://github.com/ljleppan/tmc-course/actions/workflows/linux.yml/badge.svg?event=push)![windows](https://github.com/ljleppan/tmc-course/actions/workflows/linux.yml/badge.svg?event=push)
+![linux](https://github.com/ljleppan/tmc-course/actions/workflows/linux.yml/badge.svg?event=push)![windows](https://github.com/ljleppan/tmc-course/actions/workflows/windows.yml/badge.svg?event=push)
 
 ## TODO for version 1.0.0:
 - [x] `init course`
