@@ -1,5 +1,13 @@
 # TMC Course creation helper
-![Tests](https://github.com/ljleppan/tmc-course/actions/workflows/main.yml/badge.svg?event=push)
+![linux](https://github.com/ljleppan/tmc-course/actions/workflows/linux.yml/badge.svg?event=push)![windows](https://github.com/ljleppan/tmc-course/actions/workflows/linux.yml/badge.svg?event=push)
+
+## TODO for version 1.0.0:
+- [x] `init course`
+- [x] `init part`
+- [x] `init assignment`
+- [ ] `update`
+- [ ] `test`
+- [ ] Support Windows
 
 ## Development
 ### Installing

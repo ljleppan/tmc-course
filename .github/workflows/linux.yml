@@ -1,4 +1,4 @@
-name: main
+name: Linux
 
 on:
   push:
@@ -11,11 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  main-windows:
-    uses: asottile/workflows/.github/workflows/tox.yml@v1.4.0
-    with:
-      env: '["py39"]'
-      os: windows-latest
   main-linux:
     uses: asottile/workflows/.github/workflows/tox.yml@v1.4.0
     with:
