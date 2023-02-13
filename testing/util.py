@@ -7,9 +7,7 @@ def test_resource_dir() -> Path:
     return Path(__file__).parent / "resources"
 
 
-def normalized_filecmp(
-    expected_file: Path, actual_file: Path, ignore_newlines: bool = True
-) -> bool:
+def normalized_filecmp(expected_file: Path, actual_file: Path) -> bool:
     """Compares two files ignoring the type of the newline, because TMC does it's
     own magic down the line anyways.
 

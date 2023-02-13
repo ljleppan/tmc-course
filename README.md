@@ -7,7 +7,6 @@
 - [x] `init assignment`
 - [x] `update`
 - [ ] `test`
-- [ ] Support Windows
 
 ## Development
 ### Installing
