@@ -7,6 +7,31 @@ def test_resource_dir() -> Path:
     return Path(__file__).parent / "resources"
 
 
+def normalized_filecmp(
+    expected_file: Path, actual_file: Path, ignore_newlines: bool = True
+) -> bool:
+    """Compares two files ignoring the type of the newline, because TMC does it's
+    own magic down the line anyways.
+
+    It should be enough to open() both files, as python apparently just converts
+    to universal-mode newlines at that point. For binary files, we can fall back
+    to filecmp.cmp.
+    """
+    with expected_file.open("r") as expected_fh, actual_file.open("r") as actual_fh:
+        try:
+            expected_lines = expected_fh.readlines()
+            actual_lines = actual_fh.readlines()
+        except UnicodeDecodeError:
+            # Binary files, just filecmp.cmp because there are no newlines at this point
+            return filecmp.cmp(expected_file, actual_file)
+    if len(expected_lines) != len(actual_lines):
+        return False
+    for expected_line, actual_line in zip(expected_lines, actual_lines):
+        if expected_line != actual_line:
+            return False
+    return True
+
+
 def assert_dir_equals(
     expected_path: Path, actual_path: Path, ignore: Optional[list[str]] = None
 ) -> None:
@@ -38,6 +63,6 @@ def assert_dir_equals(
         if expected_file.is_dir():
             assert_dir_equals(expected_file, actual_file)
         else:
-            assert filecmp.cmp(
-                expected_file, actual_file, shallow=False
+            assert normalized_filecmp(
+                expected_file, actual_file
             ), f"File contents differ; {expected_file=}, {actual_file=}"

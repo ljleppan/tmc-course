@@ -1,11 +1,10 @@
-import filecmp
 import logging
 from unittest.mock import ANY, call, patch
 
 import pytest
 import responses
 
-from testing.util import assert_dir_equals
+from testing.util import assert_dir_equals, normalized_filecmp
 from tmc_course import tmc_course
 
 
@@ -257,7 +256,7 @@ def test_download_tmc_python_tester(test_resource_dir, tmp_path):
         responses.get(url=url, body=zip_handle.read())
         tmc_course.download_tmc_python_tester(tmp_path, update=True)
     responses.assert_call_count(url, 1)
-    assert filecmp.cmp(zip_resource, tmp_path / "tmc-python-tester.zip", shallow=False)
+    assert normalized_filecmp(zip_resource, tmp_path / "tmc-python-tester.zip")
 
 
 def test_download_tmc_python_tester_skips_no_update(tmp_path):
@@ -280,7 +279,7 @@ def test_download_tmc_python_tester_updates(test_resource_dir, tmp_path):
         tmc_course.download_tmc_python_tester(tmp_path, update=True)
 
     responses.assert_call_count(url, 1)
-    assert filecmp.cmp(zip_resource, tmp_path / "tmc-python-tester.zip", shallow=False)
+    assert normalized_filecmp(zip_resource, tmp_path / "tmc-python-tester.zip")
 
 
 @responses.activate
