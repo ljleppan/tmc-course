@@ -1,12 +1,13 @@
 import importlib
-import inspect
 import sys
+import inspect
+
 from unittest.mock import MagicMock
 
 _stdout_pointer = 0
 
 
-def load_module(pkg, lang="en"):
+def load_module(pkg, lang='en'):
     """
     Used to load a module without::
         def main()
@@ -15,19 +16,15 @@ def load_module(pkg, lang="en"):
             main()
     When loaded, runs the code immediately.
     """
-    module_not_found = "File {0} does not exist!".format(pkg)
-    other_exception = "Running exercise {0} failed. Please make sure that you can run your code.".format(
-        pkg
-    )
-    exit_called = "Make sure your program does not exit with an exit() command."
+    module_not_found = 'File {0} does not exist!'.format(pkg)
+    other_exception = 'Running exercise {0} failed. Please make sure that you can run your code.'.format(pkg)
+    exit_called = 'Make sure your program does not exit with an exit() command.'
 
-    if lang == "fi":
-        module_not_found = "Tiedostoa {0} ei löytynyt.".format(pkg)
-        other_exception = (
-            "Tehtävän {0} suorittaminen epäonnistui. ".format(pkg)
-            + "Varmista, että saat ohjelman suoritettua loppuun."
-        )
-        exit_called = "Varmista, että koodisi ei kutsu exit() komentoa."
+    if lang == 'fi':
+        module_not_found = 'Tiedostoa {0} ei löytynyt.'.format(pkg)
+        other_exception = 'Tehtävän {0} suorittaminen epäonnistui. '.format(pkg) \
+            + 'Varmista, että saat ohjelman suoritettua loppuun.'
+        exit_called = 'Varmista, että koodisi ei kutsu exit() komentoa.'
 
     try:
         return importlib.import_module(pkg)
@@ -47,7 +44,7 @@ def reload_module(module):
     importlib.reload(module)
 
 
-def load(pkg, method, lang="en", err=None):
+def load(pkg, method, lang='en', err=None):
     """
     Loads a method from a module, doesn't run the code, needs to be called in tests.
     Exercise Example::
@@ -62,11 +59,9 @@ def load(pkg, method, lang="en", err=None):
             result = get_stdout().split('\\n')
             self.assertEqual(len(result), 4, msg="The output should contain exactly four lines!")
     """
-    module_not_found = "Function {1} was not found in file {0}.".format(pkg, method)
-    if lang == "fi":
-        module_not_found = "Tiedostosta {0} ei löytynyt funktiota {1}.".format(
-            pkg, method
-        )
+    module_not_found = 'Function {1} was not found in file {0}.'.format(pkg, method)
+    if lang == 'fi':
+        module_not_found = 'Tiedostosta {0} ei löytynyt funktiota {1}.'.format(pkg, method)
 
     if not err:
         err = module_not_found
@@ -113,7 +108,7 @@ def check_source(module):
     try:
         source = inspect.getsource(module)
     except Exception:
-        raise Exception("Varmista, että koodin suoritus onnistuu")
+        raise Exception('Varmista, että koodin suoritus onnistuu')
     allowed = [
         "import ",
         "from ",
@@ -148,23 +143,21 @@ def sanitize(mj):
     """
     Sanitize string, remove all unnecessary whitespaces.
     """
-    return "\n".join([remove_extra_whitespace(m) for m in mj.split("\n")])
+    return '\n'.join([remove_extra_whitespace(m) for m in mj.split('\n')])
 
 
-def assert_ignore_ws(self, was, expected, errmsg="", lang="fi"):
+def assert_ignore_ws(self, was, expected, errmsg='', lang='fi'):
     """
     Assert Ignore all whitespace in output.
     Example::
         assert_ignore_ws(self, output[0], 'Ukko Nooa', "First line doesn't match. ")
     """
-    xmj1 = "".join([x for x in remove_extra_whitespace(was).split(" ") if len(x) > 0])
-    xmj2 = "".join(
-        [x for x in remove_extra_whitespace(expected).split(" ") if len(x) > 0]
-    )
-    if lang == "fi":
-        err = "{0}\nTulostit:\n{1}\nOdotettiin:\n{2}".format(errmsg, was, expected)
+    xmj1 = ''.join([x for x in remove_extra_whitespace(was).split(' ') if len(x) > 0])
+    xmj2 = ''.join([x for x in remove_extra_whitespace(expected).split(' ') if len(x) > 0])
+    if lang == 'fi':
+        err = '{0}\nTulostit:\n{1}\nOdotettiin:\n{2}'.format(errmsg, was, expected)
     else:
-        err = "{0}\nYou printed:\n{1}\nExpected:\n{2}".format(errmsg, was, expected)
+        err = '{0}\nYou printed:\n{1}\nExpected:\n{2}'.format(errmsg, was, expected)
     self.assertTrue(xmj1 == xmj2, err)
 
 
@@ -178,7 +171,6 @@ def spy_decorator(method_to_decorate, name):
     def wrapper(self, *args, **kwargs):
         mock(*args, **kwargs)
         return method_to_decorate(self, *args, **kwargs)
-
     wrapper.mock = mock
     return wrapper
 
@@ -199,7 +191,6 @@ class patch_helper(object):
 
     def __init__(self, module_name):
         import importlib
-
         self.m = module_name
 
     def __call__(self, d):
@@ -208,7 +199,7 @@ class patch_helper(object):
         # If e.g. d == package.subpackage.subpackage2.attribute,
         # and our module is called mystery_data.
         try:
-            getattr(importlib.import_module(self.m), parts[-1])  # attribute
+            getattr(importlib.import_module(self.m), parts[-1])   # attribute
             p = ".".join([self.m, parts[-1]])
             # p='src.mystery_data.attribute'
         except ModuleNotFoundError:
@@ -217,18 +208,14 @@ class patch_helper(object):
             if len(parts) == 1:
                 raise
             try:
-                getattr(
-                    importlib.import_module(self.m), parts[-2]
-                )  # subpackage2.attribute
+                getattr(importlib.import_module(self.m), parts[-2])  # subpackage2.attribute
                 p = ".".join([self.m] + parts[-2:])
                 # p='src.mystery_data.subpackage2.attribute'
             except AttributeError:
                 if len(parts) == 2:
                     raise
                 try:
-                    getattr(
-                        importlib.import_module(self.m), parts[-3]
-                    )  # subpackage.subpackage2.attribute
+                    getattr(importlib.import_module(self.m), parts[-3])  # subpackage.subpackage2.attribute
                     p = ".".join([self.m] + parts[-3:])
                     # p='src.mystery_date.subpackage.subpackage2.attribute'
                 except AttributeError:

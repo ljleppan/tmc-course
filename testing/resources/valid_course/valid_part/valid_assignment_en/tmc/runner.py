@@ -1,13 +1,13 @@
-import json
-from itertools import chain
-from unittest import TestLoader, TextTestRunner
-
-from .points import _name_test, _parse_points
+from unittest import TextTestRunner, TestLoader
 from .result import TMCResult
+from .points import _parse_points, _name_test
+from itertools import chain
+import json
 
 
 class TMCTestRunner(TextTestRunner):
-    """A test runner for TMC exercises."""
+    """A test runner for TMC exercises.
+    """
 
     resultclass = TMCResult
 
@@ -15,12 +15,12 @@ class TMCTestRunner(TextTestRunner):
         super(TMCTestRunner, self).__init__(*args, **kwargs)
 
     def run(self, test):
-        print("Running tests with some TMC magic...")
+        print('Running tests with some TMC magic...')
         return super(TMCTestRunner, self).run(test)
 
     def available_points(self):
         testLoader = TestLoader()
-        tests = testLoader.discover(".", "test*.py", None)
+        tests = testLoader.discover('.', 'test*.py', None)
         try:
             tests = list(chain(*chain(*tests._tests)))
         except Exception as error:
@@ -32,5 +32,5 @@ class TMCTestRunner(TextTestRunner):
 
         result = dict(zip(names, points))
 
-        with open(".available_points.json", "w") as f:
+        with open('.available_points.json', 'w') as f:
             json.dump(result, f, ensure_ascii=False)
