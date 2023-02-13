@@ -306,7 +306,7 @@ def test_create_tmc_dir(test_resource_dir, tmp_part):
 
 
 @responses.activate
-def test_init_assignment(test_resource_dir, tmp_part):
+def test_init_assignment_en(test_resource_dir, tmp_part):
     url = (
         "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
     )
@@ -322,3 +322,151 @@ def test_init_assignment(test_resource_dir, tmp_part):
         tmp_part / "valid_assignment_en",
         ignore=["__pycache__"],
     )
+
+
+@responses.activate
+def test_init_assignment_fi(test_resource_dir, tmp_part):
+    url = (
+        "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
+    )
+    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    with zip_resource.open("rb") as zip_handle:
+        responses.get(url=url, body=zip_handle.read())
+        tmc_course.init_assignment(
+            tmp_part.parent, tmp_part.name, "valid_assignment_fi", "fi"
+        )
+
+    assert_dir_equals(
+        test_resource_dir / "valid_course" / "valid_part" / "valid_assignment_fi",
+        tmp_part / "valid_assignment_fi",
+        ignore=["__pycache__"],
+    )
+
+
+@pytest.mark.parametrize("name", (".foo", "foo bar", "foo/bar", "foo-bar"))
+def test_init_assignment_invalid_name(tmp_part, name):
+    with pytest.raises(ValueError):
+        tmc_course.init_assignment(tmp_part.parent, tmp_part.name, name, "en")
+
+
+def test_init_assignment_tgt_exists_asks_user(tmp_part):
+    (tmp_part / "assg1").mkdir()
+    with patch.object(tmc_course, "check_from_user") as mock:
+        tmc_course.init_assignment(tmp_part.parent, tmp_part.name, "assg1", "en")
+        mock.assert_called_once()
+
+
+def test_assert_valid_assignment(test_resource_dir):
+    tmc_course.assert_valid_assignment(
+        test_resource_dir / "valid_course" / "valid_part" / "valid_assignment_en"
+    )
+
+
+def test_assert_valid_assignment_not_exist(tmp_path):
+    with pytest.raises(ValueError):
+        tmc_course.assert_valid_assignment(tmp_path / "nosuch")
+
+
+def test_assert_valid_assignment_not_dir(tmp_path):
+    (tmp_path / "file.txt").touch()
+    with pytest.raises(ValueError):
+        tmc_course.assert_valid_assignment(tmp_path / "file.txt")
+
+
+def test_assert_valid_assignment_no_tmcprojectyml(tmp_path):
+    (tmp_path / "assg").mkdir()
+    with pytest.raises(ValueError):
+        tmc_course.assert_valid_assignment(tmp_path / "assg")
+
+
+@responses.activate
+def test_update_course(tmp_course, test_resource_dir):
+    url = (
+        "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
+    )
+    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    with zip_resource.open("rb") as zip_handle:
+        responses.get(url=url, body=zip_handle.read())
+
+        tmc_course.init_part(tmp_course, "part01")
+        tmc_course.init_assignment(tmp_course, "part01", "valid_assignment_fi", "fi")
+        tmc_course.init_assignment(tmp_course, "part01", "valid_assignment_en", "en")
+        tmc_course.init_assignment(tmp_course, "part01", "assg03", "en")
+
+        tmc_course.init_part(tmp_course, "part02")
+        tmc_course.init_assignment(tmp_course, "part02", "valid_assignment_fi", "fi")
+        tmc_course.init_assignment(tmp_course, "part02", "valid_assignment_en", "en")
+
+    # modify /tmc/
+    (tmp_course / "part01" / "valid_assignment_fi" / "tmc" / "hmac_writer.py").unlink()
+    (tmp_course / "part01" / "valid_assignment_en" / "tmc" / "runner.py").unlink()
+    (tmp_course / "part01" / "assg03" / "tmc" / "hmac_writer.py").unlink()
+    (tmp_course / "part02" / "valid_assignment_fi" / "tmc" / "reflect.py").unlink()
+    (tmp_course / "part02" / "valid_assignment_en" / "tmc" / "utils.py").unlink()
+
+    (tmp_course / "part01" / "valid_assignment_en" / "tmc" / "points.py").open(
+        "w"
+    ).write("MODIFIED")
+    (tmp_course / "part02" / "valid_assignment_fi" / "tmc" / "points.py").open(
+        "w"
+    ).write("MODIFIED")
+
+    # modify /src/ and /test/
+    (tmp_course / "part01" / "assg03" / "src" / "solution.py").open("w").write(
+        "DO NOT OVERWRITE"
+    )
+    (tmp_course / "part01" / "assg03" / "test" / "test_solution.py").open("w").write(
+        "TEST DATA"
+    )
+
+    with zip_resource.open("rb") as zip_handle:
+        responses.get(url=url, body=zip_handle.read())
+        tmc_course.update_course(tmp_course)
+
+    # Updates all in a part
+    assert_dir_equals(
+        test_resource_dir
+        / "valid_course"
+        / "valid_part"
+        / "valid_assignment_fi"
+        / "tmc",
+        tmp_course / "part01" / "valid_assignment_fi" / "tmc",
+        ignore=["__pycache__"],
+    )
+    assert_dir_equals(
+        test_resource_dir
+        / "valid_course"
+        / "valid_part"
+        / "valid_assignment_en"
+        / "tmc",
+        tmp_course / "part01" / "valid_assignment_en" / "tmc",
+        ignore=["__pycache__"],
+    )
+    assert_dir_equals(
+        test_resource_dir
+        / "valid_course"
+        / "valid_part"
+        / "valid_assignment_en"
+        / "tmc",
+        tmp_course / "part01" / "assg03" / "tmc",
+        ignore=["__pycache__"],
+    )
+
+    # Updates all parts
+    assert_dir_equals(
+        test_resource_dir
+        / "valid_course"
+        / "valid_part"
+        / "valid_assignment_en"
+        / "tmc",
+        tmp_course / "part02" / "valid_assignment_en" / "tmc",
+        ignore=["__pycache__"],
+    )
+
+    # Doesn't touch /src/ or /test/
+    assert (
+        tmp_course / "part01" / "assg03" / "src" / "solution.py"
+    ).read_text() == "DO NOT OVERWRITE"
+    assert (
+        tmp_course / "part01" / "assg03" / "test" / "test_solution.py"
+    ).read_text() == "TEST DATA"

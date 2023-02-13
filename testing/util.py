@@ -19,9 +19,13 @@ def assert_dir_equals(
         expected_files = [f for f in expected_files if f.name not in ignore]
         actual_files = [f for f in actual_files if f.name not in ignore]
 
-    assert set(f.name for f in expected_files) == set(
-        f.name for f in actual_files
-    ), f"{expected_files=}, {actual_files=}"
+    expected_filenames = set(f.name for f in expected_files)
+    actual_filenames = set(f.name for f in actual_files)
+    assert expected_filenames == actual_filenames, (
+        "File name sets are not equivalent; ",
+        f"{expected_filenames=}, {actual_filenames=}; ",
+        f"diff: {expected_filenames.symmetric_difference(actual_filenames)}",
+    )
 
     # Doing what filecmp.dircmp *should* be doing
     expected_files = sorted(expected_files)
@@ -29,10 +33,10 @@ def assert_dir_equals(
     for expected_file, actual_file in zip(expected_files, actual_files):
         assert (
             expected_file.name == actual_file.name
-        ), f"{expected_file.name=}, {actual_file.name=}"
+        ), f"File names differ; {expected_file.name=}, {actual_file.name=}"
         if expected_file.is_dir():
             assert_dir_equals(expected_file, actual_file)
         else:
             assert filecmp.cmp(
                 expected_file, actual_file, shallow=False
-            ), f"{expected_file=}, {actual_file=}"
+            ), f"File contents differ; {expected_file=}, {actual_file=}"

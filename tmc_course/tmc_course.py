@@ -189,6 +189,7 @@ def create_tmc_dir(assignment_path: Path) -> None:
 
     with zipfile.ZipFile(course_path / "tmc-python-tester.zip") as tester_zip:
         for file_info in tester_zip.infolist():
+            logging.debug(f"Looking at file {file_info.filename=}")
             if file_info.filename.startswith("tmc-python-tester-master/tmc/"):
                 # Need to remove prefix, s.t. we don't retain the parent folders
                 file_info.filename = file_info.filename.replace(
@@ -234,15 +235,15 @@ def assert_valid_assignment(assignment_path: Path) -> None:
     if not assignment_path.exists():
         raise ValueError(f"Assignment {assignment_path} does not exist")
     if not assignment_path.is_dir():
-        raise ValueError("Assignment {assignment_path} is not a directory")
+        raise ValueError(f"Assignment {assignment_path} is not a directory")
     logging.debug(f"{assignment_path} is a valid course part")
     if not any(
         filepath.name == ".tmcproject.yml" for filepath in assignment_path.iterdir()
     ):
         raise ValueError(
-            "{assignment_path} is not a TMC assignment (missing .tmcproject.yml)"
+            f"{assignment_path} is not a TMC assignment (missing .tmcproject.yml)"
         )
-    logging.debug(f"{assignment_path} is a valid TMC course")
+    logging.debug(f"{assignment_path} is a valid TMC assignment")
 
 
 def update_course(course_path: Path) -> None:
@@ -250,19 +251,18 @@ def update_course(course_path: Path) -> None:
     download_tmc_python_tester(course_path, update=True)
     assert_valid_course(course_path)
     for maybe_part in course_path.iterdir():
-        logging.debug("Checking whether {maybe_part} is a course part")
-        if not maybe_part.is_dir():
-            logging.debug("Not a directory, skipping")
+        logging.debug(f"Checking whether {maybe_part} is a course part")
+        try:
+            assert_valid_part(maybe_part.parent, maybe_part.name)
+        except ValueError as ex:
+            logging.debug(f"Not a part, skipping ({ex})")
             continue
         for maybe_assignment in maybe_part.iterdir():
             logging.debug(f"Checking whether {maybe_assignment} is an assignment")
-            if not maybe_assignment.is_dir():
-                logging.debug("Not a directory, skipping")
-                continue
-            if not any(
-                fh.name.endswith(".tmcproject.yml") for fh in maybe_assignment.iterdir()
-            ):
-                logging.debug("Has no .tmcproject.yml, skipping")
+            try:
+                assert_valid_assignment(maybe_assignment)
+            except ValueError as ex:
+                logging.debug(f"Not an assignment, skipping ({ex})")
                 continue
             logging.info(f"Updating assignment at {maybe_assignment}")
             create_tmc_dir(maybe_assignment)
@@ -442,7 +442,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 test_course(args.course_path)
         if args.action == "update":
-            update_course(args.course_path)
+            update_course(Path(args.course_path))
     except ActionCancelledException:
         print("OK, quitting")
         return 1
