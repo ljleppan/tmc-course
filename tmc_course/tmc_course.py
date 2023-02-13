@@ -191,7 +191,9 @@ def create_tmc_dir(assignment_path: Path) -> None:
         for file_info in tester_zip.infolist():
             if file_info.filename.startswith("tmc-python-tester-master/tmc/"):
                 # Need to remove prefix, s.t. we don't retain the parent folders
-                file_info.filename.replace("tmc-python-tester-master/tmc/", "")
+                file_info.filename = file_info.filename.replace(
+                    "tmc-python-tester-master/tmc", ""
+                )
                 logging.debug(
                     f'Extracting {file_info.filename} to {assignment_path / "tmc"}'
                 )

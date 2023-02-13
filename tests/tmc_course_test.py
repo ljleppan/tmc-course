@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 import responses
 
+from testing.util import assert_dir_equals
 from tmc_course import tmc_course
 
 
@@ -255,7 +256,7 @@ def test_download_tmc_python_tester(test_resource_dir, tmp_path):
         responses.get(url=url, body=zip_handle.read())
         tmc_course.download_tmc_python_tester(tmp_path, update=True)
     responses.assert_call_count(url, 1)
-    assert filecmp.cmp(zip_resource, tmp_path / "tmc-python-tester.zip")
+    assert filecmp.cmp(zip_resource, tmp_path / "tmc-python-tester.zip", shallow=False)
 
 
 def test_download_tmc_python_tester_skips_no_update(tmp_path):
@@ -267,13 +268,57 @@ def test_download_tmc_python_tester_skips_no_update(tmp_path):
 
 @responses.activate
 def test_download_tmc_python_tester_updates(test_resource_dir, tmp_path):
+    (tmp_path / "tmc-python-tester.zip").touch()
+
     url = (
         "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
     )
     zip_resource = test_resource_dir / "tmc-python-tester.zip"
-    zip_resource.touch()
     with zip_resource.open("rb") as zip_handle:
         responses.get(url=url, body=zip_handle.read())
         tmc_course.download_tmc_python_tester(tmp_path, update=True)
+
     responses.assert_call_count(url, 1)
-    assert filecmp.cmp(zip_resource, tmp_path / "tmc-python-tester.zip")
+    assert filecmp.cmp(zip_resource, tmp_path / "tmc-python-tester.zip", shallow=False)
+
+
+@responses.activate
+def test_create_tmc_dir(test_resource_dir, tmp_part):
+    expected_path = (
+        test_resource_dir
+        / "valid_course"
+        / "valid_part"
+        / "valid_assignment_en"
+        / "tmc"
+    )
+    assg_path = tmp_part / "assg01"
+    assg_path.mkdir()
+
+    url = (
+        "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
+    )
+    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    with zip_resource.open("rb") as zip_handle:
+        responses.get(url=url, body=zip_handle.read())
+        tmc_course.create_tmc_dir(assg_path)
+
+    assert_dir_equals(expected_path, assg_path / "tmc")
+
+
+@responses.activate
+def test_init_assignment(test_resource_dir, tmp_part):
+    url = (
+        "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
+    )
+    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    with zip_resource.open("rb") as zip_handle:
+        responses.get(url=url, body=zip_handle.read())
+        tmc_course.init_assignment(
+            tmp_part.parent, tmp_part.name, "valid_assignment_en", "en"
+        )
+
+    assert_dir_equals(
+        test_resource_dir / "valid_course" / "valid_part" / "valid_assignment_en",
+        tmp_part / "valid_assignment_en",
+        ignore=["__pycache__"],
+    )
