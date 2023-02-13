@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tmc-course"
+version = "1.0.0"
+description = "TMC course and assignment creation helper"
+readme = {file = "README.md", content-type="text/markdown"}
+authors = [
+    {name = "Leo Leppänen", email = "leo.leppanen@helsinki.fi"}
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Typing :: Typed"
+]
+keywords = ["TestMyCode", "TMC", "helper", "teacher", "tool"]
+requires-python = ">=3.8"
+dependencies = [
+    "requests >= 2.28.2"
+]
+
+[project.urls]
+repository = "https://github.com/ljleppan/tmc-course"
+
+[project.scripts]
+tmc-course = "tmc_course.tmc_course:main"
+
+[tool.setuptools.packages.find]
+exclude = [
+    "tests*",
+    "testing*",
+    "*/resources*"
+]
+
+[tool.setuptools.package-data]
+tmc_course = ["*.template"]
+
+
+[tool.pytest.ini_options]
+addopts = "--ignore=testing/resources"
+
+[tool.coverage.run]
+plugins = ["covdefaults"]
+parallel = true
+omit = [
+    "tmc_course/resources/*",
+    "testing/resources/*"
+]
+
+[tool.coverage.report]
+fail_under = 80
+
+[tool.isort]
+line_length = 88
+
+[tool.mypy]
+strict = true
+exclude = [
+    "venv",
+    "tests",
+    "testing"
+]
+
+[[tool.mypy.overrides]]
+module = "tests"
+allow_untyped_defs = true

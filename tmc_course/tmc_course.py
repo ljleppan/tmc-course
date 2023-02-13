@@ -1,4 +1,5 @@
 import argparse
+import importlib.metadata
 import importlib.resources
 import logging
 import shutil
@@ -268,52 +269,14 @@ def update_course(course_path: Path) -> None:
             create_tmc_dir(maybe_assignment)
 
 
-def test_course(course_path: Path) -> None:
-    logging.info(f"Running tests for course {course_path}")
-    assert_valid_course(course_path)
-
-    assignments: list[Path] = []
-    for maybe_part in course_path.iterdir():
-        try:
-            assert_valid_part(course_path, maybe_part.name)
-        except ValueError:
-            continue
-        for maybe_assignment in maybe_part.iterdir():
-            try:
-                assert_valid_assignment(maybe_assignment)
-            except ValueError:
-                continue
-            assignments.append(maybe_assignment)
-    run_tests(assignments)
+def test(path: Path) -> None:
+    raise NotImplementedError
 
 
-def test_part(course_path: Path, part_name: str) -> None:
-    assert_valid_course(course_path)
-    assert_valid_part(course_path, part_name)
-    part_path = course_path / part_name
-
-    assignments: list[Path] = []
-    for maybe_assignment in part_path.iterdir():
-        try:
-            assert_valid_assignment(maybe_assignment)
-        except ValueError:
-            pass
-        assignments.append(maybe_assignment)
-    run_tests(assignments)
-
-
-def test_assignment(course_path: Path, part_name: str, assignment_name: str) -> None:
-    assert_valid_course(course_path)
-    assert_valid_part(course_path, part_name)
-    assert_valid_assignment(course_path / part_name / assignment_name)
-
-    run_tests([course_path / part_name / assignment_name])
-
-
-def run_tests(assignment_paths: list[Path]) -> None:
+def run_multiple_tests(assignment_paths: list[Path]) -> None:
     results: dict[Path, tuple[int, str, str]] = {}
     for assignment in assignment_paths:
-        results[assignment] = run_test(assignment)
+        results[assignment] = run_test_single(assignment)
     if all(r[0] == 0 for r in results.values()):
         logging.info("All tests passed")
     else:
@@ -326,7 +289,7 @@ def run_tests(assignment_paths: list[Path]) -> None:
                 logging.info("--------")
 
 
-def run_test(assignment_path: Path) -> tuple[int, str, str]:
+def run_test_single(assignment_path: Path) -> tuple[int, str, str]:
     result = subprocess.run(["python3", "-m", "tmc"], cwd=assignment_path)
     logging.info(
         f"{assignment_path}: {'SUCCESS' if result.returncode == 0 else 'FAIL'}"
@@ -339,13 +302,18 @@ def main(argv: list[str] | None = None) -> int:
         "tmc-course",
         description="Helper for building TestMyCode python programming courses",
     )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=importlib.metadata.version(__package__ or __name__),
+    )
 
     verbosity_grp = parser.add_mutually_exclusive_group()
     verbosity_grp.add_argument(
-        "--quiet", action="store_true", help="Only output warning"
+        "--quiet", "-q", action="store_true", help="Only output warning"
     )
     verbosity_grp.add_argument(
-        "--verbose", action="store_true", help="Output debugging information"
+        "--verbose", "-v", action="store_true", help="Output debugging information"
     )
 
     actions = parser.add_subparsers(
@@ -365,14 +333,13 @@ def main(argv: list[str] | None = None) -> int:
     # INIT COURSE
     init_course_grp = init_actions.add_parser("course", help="Initialize a new course")
     init_course_grp.add_argument(
-        "course_path", type=str, help="Course root directory (should not exist)"
+        "path", type=str, nargs="+", help="Path(s) of the new course(s)"
     )
 
     # INIT PART
     init_part_grp = init_actions.add_parser("part", help="Initialize a new course part")
-    init_part_grp.add_argument("course_path", type=str, help="Course root directory")
     init_part_grp.add_argument(
-        "part", type=str, nargs="+", help="Name(s) of part(s) to initialize"
+        "path", type=str, nargs="+", help="Path(s) of the new part(s)"
     )
 
     # INIT ASSIGNMENT
@@ -380,13 +347,7 @@ def main(argv: list[str] | None = None) -> int:
         "assignment", help="Initialize a assignment"
     )
     init_assignment_grp.add_argument(
-        "course_path", type=str, help="Course root directory"
-    )
-    init_assignment_grp.add_argument(
-        "part", type=str, help="Name of part assignment(s) belong to"
-    )
-    init_assignment_grp.add_argument(
-        "assignment", type=str, nargs="+", help="Name(s) of assignment(s) to initialize"
+        "path", type=str, nargs="+", help="Path(s) of the new assignment(s)"
     )
     language_grp = init_assignment_grp.add_mutually_exclusive_group(required=True)
     language_grp.add_argument(
@@ -398,15 +359,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # TEST
     test_grp = actions.add_parser("test", help="Test a new course, part or assignment")
-    test_grp.add_argument("course_path", type=str, help="Course root directory")
-    test_grp.add_argument("part", type=str, help="Name of part")
-    test_grp.add_argument("assignment", type=str, help="Name of assignment")
+    test_grp.add_argument("path", type=str, help="Path (course, part or assignment)")
 
     # UPDATE
     update_grp = actions.add_parser(
         "update", help="Update TMC-python-runner embedded in assignments"
     )
-    update_grp.add_argument("course_path", type=str, help="Course root directory")
+    update_grp.add_argument("Path", type=str, help="Course root directory")
 
     # Verbosity control
     args = parser.parse_args(argv)
@@ -423,26 +382,23 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.action == "init":
+            paths = (Path(path) for path in args.paths)
             if args.init_action == "course":
-                init_course(Path(args.course_path))
+                for path in paths:
+                    init_course(path)
             elif args.init_action == "part":
-                for part in args.part:
-                    init_part(Path(args.course_path), part)
+                for path in paths:
+                    init_part(path.parent, path.name)
             elif args.init_action == "assignment":
                 language: Literal["fi", "en"] = "fi" if args.finnish else "en"
-                for assignment in args.assignment:
+                for path in paths:
                     init_assignment(
-                        Path(args.course_path), args.part, assignment, language
+                        path.parent.parent, path.parent.name, path.name, language
                     )
         if args.action == "test":
-            if args.part and args.assignment:
-                test_assignment(args.course_path, args.part, args.assignment)
-            elif args.part:
-                test_part(args.course_path, args.part)
-            else:
-                test_course(args.course_path)
+            test(Path(args.path))
         if args.action == "update":
-            update_course(Path(args.course_path))
+            update_course(Path(args.path))
     except ActionCancelledException:
         print("OK, quitting")
         return 1
