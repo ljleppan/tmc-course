@@ -1,4 +1,5 @@
 # TMC Course creation helper
+![Tests](https://github.com/ljleppan/tmc-course/actions/workflows/main.yml/badge.svg?event=push)
 
 ## Development
 ### Installing
