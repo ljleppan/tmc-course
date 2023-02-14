@@ -322,7 +322,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         "--quiet", "-q", action="store_true", help="Only output warning"
     )
     verbosity_grp.add_argument(
-        "--verbose", "-v", action="store_true", help="Output debugging information"
+        "--debug", "-d", action="store_true", help="Output debugging information"
     )
 
     actions = parser.add_subparsers(
@@ -378,11 +378,11 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     # Verbosity control
     args = parser.parse_args(argv)
-    if not (args.quiet or args.verbose):
+    if not (args.quiet or args.debug):
         logging.basicConfig(format="%(message)s", level=logging.INFO)
     if args.quiet:
         logging.basicConfig(format="%(message)s", level=logging.WARNING)
-    if args.verbose:
+    if args.debug:
         logging.basicConfig(
             format="%(levelname)s:%(asctime)s: %(message)s", level=logging.DEBUG
         )

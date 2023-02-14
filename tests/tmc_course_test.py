@@ -548,8 +548,8 @@ def test_verbosity_normal():
             mock_logging.assert_called_once_with(format=ANY, level=logging.INFO)
 
 
-def test_verbosity_verbose():
+def test_verbosity_debug():
     with patch.object(tmc_course, "update_course"):
         with patch.object(tmc_course.logging, "basicConfig") as mock_logging:
-            tmc_course.main(["--verbose", "update", "nosuchcourse"])
+            tmc_course.main(["--debug", "update", "nosuchcourse"])
             mock_logging.assert_called_once_with(format=ANY, level=logging.DEBUG)
