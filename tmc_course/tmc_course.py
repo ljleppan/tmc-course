@@ -1,15 +1,19 @@
 import argparse
+import contextlib
 import importlib.metadata
 import importlib.resources
 import logging
+import os
 import shutil
 import subprocess
 import zipfile
+from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Generator, Literal, Optional
 
 import requests
+import treelib  # type: ignore
 
 TMC_PYTHON_TESTER_ZIP_URL = (
     "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
@@ -278,32 +282,127 @@ def update_course(course_path: Path) -> None:
             create_tmc_dir(maybe_assignment)
 
 
-def test(path: Path) -> None:
-    raise NotImplementedError
+@dataclass
+class TestTask:
+    path: Path
+
+    @property
+    def course_path(self) -> Path:
+        return self.path.parent.parent
+
+    @property
+    def part_path(self) -> Path:
+        return self.path.parent
 
 
-def run_multiple_tests(assignment_paths: list[Path]) -> None:
-    results: dict[Path, tuple[int, str, str]] = {}
-    for assignment in assignment_paths:
-        results[assignment] = run_test_single(assignment)
-    if all(r[0] == 0 for r in results.values()):
-        logging.info("All tests passed")
-    else:
-        logging.warning("Following tests failed:")
-        for assignment, (status, stdout, stderr) in results.items():
-            if status != 0:
-                logging.warning(f"{assignment}: status code {status}")
-                logging.info(f"STDOUT:\n{stdout}")
-                logging.info(f"STDERR:\n{stderr}")
-                logging.info("--------")
+@dataclass
+class TestResult:
+    task: TestTask
+    success: bool
+    stdout: str
+    stderr: str
 
 
-def run_test_single(assignment_path: Path) -> tuple[int, str, str]:
-    result = subprocess.run(["python3", "-m", "tmc"], cwd=assignment_path)
-    logging.info(
-        f"{assignment_path}: {'SUCCESS' if result.returncode == 0 else 'FAIL'}"
+def collect_tasks(paths: list[Path]) -> Generator[TestTask, None, None]:
+    for path in paths:
+        if is_valid_assignment(path):
+            logging.debug(f"{path} is assignment")
+            yield TestTask(path)
+        elif is_valid_part(path):
+            logging.debug(f"{path} appears to be a part")
+            yield from collect_tasks(
+                list(child for child in path.iterdir() if child.is_dir())
+            )
+        elif is_valid_course(path):
+            logging.debug(f"{path} appears to be a course")
+            yield from collect_tasks(
+                list(child for child in path.iterdir() if child.is_dir())
+            )
+        else:
+            logging.debug(f"{path} is neither an assignment, a part, or a course")
+
+
+def is_last_child_of_parent(nodeid: object, tree: treelib.Tree) -> bool:
+    if not tree.parent(nodeid):
+        return True
+
+    # variable needed for mypy; treelib is untyped, so otherwise the result
+    # of this __eq__ is Any
+    result: bool = (
+        tree.get_node(nodeid) == tree.children(tree.parent(nodeid).identifier)[-1]
     )
-    return result.returncode, str(result.stdout), str(result.stderr)
+    return result
+
+
+def print_test_output(results: list[TestResult], detailed: bool = False) -> None:
+    tree = treelib.Tree()
+    tree.create_node("Test Results", "root")
+
+    for course_path in set(result.task.course_path for result in results):
+        tree.create_node(course_path.name, course_path, parent="root")
+
+    for part_path in set(result.task.part_path for result in results):
+        tree.create_node(part_path.name, part_path, parent=part_path.parent)
+
+    for idx, result in enumerate(results):
+        affix = "SUCCESS" if result.success else "FAIL"
+        tree.create_node(
+            f"{result.task.path.name} -- {affix}",
+            result.task.path,
+            parent=result.task.part_path,
+        )
+
+    tree.show()
+
+
+def test(paths: list[Path], detailed: bool = False) -> bool:
+    logging.debug("Collecting assignments")
+    tasks: list[TestTask] = list(collect_tasks(paths))
+
+    logging.debug("Running tests")
+    results = [run_test_task(task) for task in tasks]
+
+    for result in results:
+        if detailed or not result.success:
+            logging.info("")
+            logging.info(f"\nTEST RESULTS FOR {result.task.path}:")
+            tabbed_stderr = "\n".join(
+                "\t" + line for line in result.stderr.splitlines()
+            )
+            logging.info(tabbed_stderr)
+    logging.info("\n")
+
+    if logging.getLogger().isEnabledFor(logging.INFO):
+        print_test_output(results, detailed=detailed)
+
+    return all(result.success for t in results)
+
+
+@contextlib.contextmanager
+def cwd(path: Path) -> Generator[None, None, None]:
+    old_wd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(old_wd)
+
+
+def run_test_task(task: TestTask) -> TestResult:
+    assignment_path = task.path.absolute()
+    logging.debug(f"Running tests for {assignment_path}")
+    if not is_valid_assignment(assignment_path):
+        raise ValueError(f"{assignment_path} is not a valid TMC assignment")
+    with cwd(assignment_path):
+        logging.debug(f"{assignment_path=}, {os.getcwd()=}")
+        result = subprocess.run(
+            ["python3", "-m", "tmc"],
+            cwd=assignment_path,
+            capture_output=True,
+            text=True,
+        )
+    logging.debug(f"Test run complete; {result.returncode=}")
+    return TestResult(task, result.returncode == 0, result.stdout, result.stderr)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -368,7 +467,12 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     # TEST
     test_grp = actions.add_parser("test", help="Test a new course, part or assignment")
-    test_grp.add_argument("path", type=str, help="Path (course, part or assignment)")
+    test_grp.add_argument(
+        "path", type=str, nargs="+", help="Path(s) to test (course, part or assignment)"
+    )
+    test_grp.add_argument(
+        "--verbose", "-v", action="store_true", help="Show more details"
+    )
 
     # UPDATE
     update_grp = actions.add_parser(
@@ -405,7 +509,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                         path.parent.parent, path.parent.name, path.name, language
                     )
         if args.action == "test":
-            test(Path(args.path))
+            all_passed = test([Path(path) for path in args.path], detailed=args.verbose)
+            if not all_passed:
+                return 1
         if args.action == "update":
             update_course(Path(args.path))
     except ActionCancelledException:
