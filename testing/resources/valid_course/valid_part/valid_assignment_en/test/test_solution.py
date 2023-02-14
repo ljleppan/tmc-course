@@ -25,9 +25,9 @@ class SolutionTest(unittest.TestCase):
         )
 
     def test_1(self):
-        funktio = load(exercise, "funktio", "en")
+        function = load(exercise, "function", "en")
         self.assertEquals(
-            1, funktio(), "The function 'function' should return the value 1"
+            1, function(), "The function 'function' should return the value 1"
         )
 
 
