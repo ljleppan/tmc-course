@@ -94,27 +94,24 @@ def test_init_course_valid_name(tmp_path, name):
     tmc_course.init_course(tmp_path / name)
 
 
-def test_assert_valid_course(test_resource_dir):
-    tmc_course.assert_valid_course(test_resource_dir / "valid_course")
+def test_is_valid_course(test_resource_dir):
+    assert tmc_course.is_valid_course(test_resource_dir / "valid_course")
 
 
-def test_assert_valid_course_nonexistant(tmp_path):
-    with pytest.raises(ValueError):
-        tmc_course.assert_valid_course(tmp_path / "no_such")
+def test_is_valid_course_nonexistant(tmp_path):
+    assert not tmc_course.is_valid_course(tmp_path / "no_such")
 
 
-def test_assert_valid_course_not_dir(tmp_path):
+def test_is_valid_course_not_dir(tmp_path):
     filepath = tmp_path / "file.txt"
     filepath.touch()
-    with pytest.raises(ValueError):
-        tmc_course.assert_valid_course(filepath)
+    assert not tmc_course.is_valid_course(filepath)
 
 
-def test_assert_valid_course_no_tmcproject_yml(tmp_path):
+def test_is_valid_course_no_tmcproject_yml(tmp_path):
     dirpath = tmp_path / "dir"
     dirpath.mkdir()
-    with pytest.raises(ValueError):
-        tmc_course.assert_valid_course(dirpath)
+    assert not tmc_course.is_valid_course(dirpath)
 
 
 def test_init_part(tmp_course):
@@ -141,19 +138,17 @@ def test_init_part_checks_if_exists(tmp_course):
         mock.assert_called_once()
 
 
-def test_assert_valid_part(test_resource_dir):
-    tmc_course.assert_valid_part(test_resource_dir / "valid_course", "valid_part")
+def test_is_valid_part(test_resource_dir):
+    assert tmc_course.is_valid_part(test_resource_dir / "valid_course" / "valid_part")
 
 
-def test_assert_valid_part_checks_exists(tmp_course):
-    with pytest.raises(ValueError):
-        tmc_course.assert_valid_part(tmp_course, "no-such")
+def test_is_valid_part_checks_exists(tmp_course):
+    assert not tmc_course.is_valid_part(tmp_course / "no-such")
 
 
-def test_assert_valid_part_checks_is_dir(tmp_course):
+def test_is_valid_part_checks_is_dir(tmp_course):
     (tmp_course / "file.txt").touch()
-    with pytest.raises(ValueError):
-        tmc_course.assert_valid_part(tmp_course, "file.txt")
+    assert not tmc_course.is_valid_part(tmp_course / "file.txt")
 
 
 def test_create_src_skeleton_fi(tmp_path, test_resource_dir):
@@ -356,27 +351,24 @@ def test_init_assignment_tgt_exists_asks_user(tmp_part):
         mock.assert_called_once()
 
 
-def test_assert_valid_assignment(test_resource_dir):
-    tmc_course.assert_valid_assignment(
+def test_is_valid_assignment(test_resource_dir):
+    assert tmc_course.is_valid_assignment(
         test_resource_dir / "valid_course" / "valid_part" / "valid_assignment_en"
     )
 
 
-def test_assert_valid_assignment_not_exist(tmp_path):
-    with pytest.raises(ValueError):
-        tmc_course.assert_valid_assignment(tmp_path / "nosuch")
+def test_is_valid_assignment_not_exist(tmp_path):
+    assert not tmc_course.is_valid_assignment(tmp_path / "nosuch")
 
 
-def test_assert_valid_assignment_not_dir(tmp_path):
+def test_is_valid_assignment_not_dir(tmp_path):
     (tmp_path / "file.txt").touch()
-    with pytest.raises(ValueError):
-        tmc_course.assert_valid_assignment(tmp_path / "file.txt")
+    assert not tmc_course.is_valid_assignment(tmp_path / "file.txt")
 
 
-def test_assert_valid_assignment_no_tmcprojectyml(tmp_path):
+def test_is_valid_assignment_no_tmcprojectyml(tmp_path):
     (tmp_path / "assg").mkdir()
-    with pytest.raises(ValueError):
-        tmc_course.assert_valid_assignment(tmp_path / "assg")
+    assert not tmc_course.is_valid_assignment(tmp_path / "assg")
 
 
 @responses.activate

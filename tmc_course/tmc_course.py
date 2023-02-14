@@ -78,22 +78,27 @@ def init_course(course_path: Path) -> None:
     )
 
 
-def assert_valid_course(course_path: Path) -> None:
+def is_valid_course(course_path: Path) -> bool:
     if not course_path.exists():
-        raise ValueError("Course root directory does not exist")
+        logging.debug("Course root directory does not exist")
+        return False
     if not course_path.is_dir():
-        raise ValueError("Course root is not a directory")
+        logging.debug("Course root is not a directory")
+        return False
     if not any(
         filepath.name == ".tmcproject.yml" for filepath in course_path.iterdir()
     ):
-        raise ValueError(
+        logging.debug(
             "Course root does not appear to be a TMC course (missing .tmcproject.yml)"
         )
+        return False
     logging.debug(f"{course_path} is a valid TMC course")
+    return True
 
 
 def init_part(course_path: Path, part_name: str) -> None:
-    assert_valid_course(course_path)
+    if not is_valid_course(course_path):
+        raise ValueError(f"{course_path} is not a TMC course")
 
     if not part_name.replace("_", "").isalnum():
         raise ValueError("Part name must be alphanumeric (underscores allowed)")
@@ -109,12 +114,18 @@ def init_part(course_path: Path, part_name: str) -> None:
     part_path.mkdir(exist_ok=True)
 
 
-def assert_valid_part(course_path: Path, part_name: str) -> None:
-    if not (course_path / part_name).exists():
-        raise ValueError(f"Part {part_name} does not exist")
-    if not (course_path / part_name).is_dir():
-        raise ValueError(f"{course_path / part_name} is not a directory")
-    logging.debug(f"{course_path / part_name} is a valid course part")
+def is_valid_part(part: Path) -> bool:
+    if not part.exists():
+        logging.debug("Part {part_name} does not exist")
+        return False
+    if not part.is_dir():
+        logging.debug(f"{part} is not a directory")
+        return False
+    if not is_valid_course(part.parent):
+        logging.debug(f"Parent {part.parent} is not valid course")
+        return False
+    logging.debug(f"{part} is a valid course part")
+    return True
 
 
 def create_src_skeleton(assignment_path: Path, language: Literal["en", "fi"]) -> None:
@@ -208,8 +219,10 @@ def init_assignment(
     assignment_name: str,
     language: Literal["fi", "en"],
 ) -> None:
-    assert_valid_course(course_path)
-    assert_valid_part(course_path, part_name)
+    if not is_valid_course(course_path):
+        raise ValueError(f"{course_path} is not a valid TMC course")
+    if not is_valid_part(course_path / part_name):
+        raise ValueError(f"{course_path / part_name} is not a valid course part")
 
     if not assignment_name.replace("_", "").isalnum():
         raise ValueError("Assignment name must be alphanumeric (underscores allowed)")
@@ -232,38 +245,34 @@ def init_assignment(
     create_tmc_dir(assignment_path)
 
 
-def assert_valid_assignment(assignment_path: Path) -> None:
+def is_valid_assignment(assignment_path: Path) -> bool:
     if not assignment_path.exists():
-        raise ValueError(f"Assignment {assignment_path} does not exist")
+        logging.debug(f"Assignment {assignment_path} does not exist")
+        return False
     if not assignment_path.is_dir():
-        raise ValueError(f"Assignment {assignment_path} is not a directory")
-    logging.debug(f"{assignment_path} is a valid course part")
-    if not any(
-        filepath.name == ".tmcproject.yml" for filepath in assignment_path.iterdir()
-    ):
-        raise ValueError(
-            f"{assignment_path} is not a TMC assignment (missing .tmcproject.yml)"
-        )
+        logging.debug(f"Assignment {assignment_path} is not a directory")
+        return False
+    for tgt in (".tmcproject.yml", "test", "src", "tmc"):
+        if not any(filepath.name == tgt for filepath in assignment_path.iterdir()):
+            logging.debug(f"{assignment_path} is not a TMC assignment (missing {tgt})")
+            return False
     logging.debug(f"{assignment_path} is a valid TMC assignment")
+    return True
 
 
 def update_course(course_path: Path) -> None:
     logging.info(f"Updating TMC-python-tester for course {course_path}")
     download_tmc_python_tester(course_path, update=True)
-    assert_valid_course(course_path)
+    is_valid_course(course_path)
     for maybe_part in course_path.iterdir():
         logging.debug(f"Checking whether {maybe_part} is a course part")
-        try:
-            assert_valid_part(maybe_part.parent, maybe_part.name)
-        except ValueError as ex:
-            logging.debug(f"Not a part, skipping ({ex})")
+        if not is_valid_part(maybe_part):
+            logging.debug("Not a part, skipping")
             continue
         for maybe_assignment in maybe_part.iterdir():
             logging.debug(f"Checking whether {maybe_assignment} is an assignment")
-            try:
-                assert_valid_assignment(maybe_assignment)
-            except ValueError as ex:
-                logging.debug(f"Not an assignment, skipping ({ex})")
+            if not is_valid_assignment(maybe_assignment):
+                logging.debug("Not an assignment, skipping")
                 continue
             logging.info(f"Updating assignment at {maybe_assignment}")
             create_tmc_dir(maybe_assignment)
