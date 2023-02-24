@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tmc-course"
-version = "1.0.0"
+version = "1.0.0b1"
 description = "TMC course and assignment creation helper"
 readme = {file = "README.md", content-type="text/markdown"}
 authors = [
