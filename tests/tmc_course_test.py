@@ -610,7 +610,7 @@ def test_collect_tasks_invalid(tmp_path):
     assert len(tasks) == 0
 
 
-def run_test_task_invalid_path(tmp_path):
+def test_run_test_task_invalid_path(tmp_path):
     with pytest.raises(ValueError):
         tmc_course.run_test_task(tmc_course.TestTask(tmp_path / "no_such"))
 
