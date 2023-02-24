@@ -70,7 +70,7 @@ tmc_course = ["*.template"]
 [tool.pytest.ini_options]
 testpaths = [
     "tests",
-    "testing",
+    "testing"
 ]
 addopts = "--ignore=testing/resources"
 
