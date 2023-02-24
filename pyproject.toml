@@ -24,7 +24,7 @@ classifiers = [
     "Typing :: Typed"
 ]
 keywords = ["TestMyCode", "TMC", "helper", "teacher", "tool"]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "requests >= 2.28.2",
     "treelib >= 1.6.1",
