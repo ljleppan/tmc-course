@@ -491,8 +491,6 @@ def main(argv: Optional[list[str]] = None) -> int:
             format="%(levelname)s:%(asctime)s: %(message)s", level=logging.DEBUG
         )
 
-    logging.error(args)
-
     try:
         if args.action == "init":
             paths = (Path(path) for path in args.path)
