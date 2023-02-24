@@ -1,14 +1,13 @@
 .PHONY : clean build upload
 
-all: clean build upload
-
 clean :
 	python3 -m setup clean --all
-	rm -rf dist *.egg-info
+	- rm -rf dist *.egg-info
 
-build :
+build : clean
+	tox
 	python3 -m build
-	python3 -m twine check dist/*
 
-upload :
+upload : build
+	python3 -m twine check dist/*
 	python3 -m twine upload dist/*
