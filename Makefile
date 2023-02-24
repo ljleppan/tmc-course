@@ -2,7 +2,7 @@
 
 clean :
 	python3 -m setup clean --all
-	- rm -rf dist *.egg-info
+	rm -rf dist *.egg-info
 
 build : clean
 	tox
