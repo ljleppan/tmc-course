@@ -334,7 +334,7 @@ def is_last_child_of_parent(nodeid: object, tree: treelib.Tree) -> bool:
     return result
 
 
-def print_test_output(results: list[TestResult], detailed: bool = False) -> None:
+def print_test_output(results: list[TestResult]) -> None:
     tree = treelib.Tree()
     tree.create_node("Test Results", "root")
 
@@ -372,8 +372,8 @@ def test(paths: list[Path], detailed: bool = False) -> tuple[bool, list[TestResu
             logging.info(tabbed_stderr)
     logging.info("\n")
 
-    if logging.getLogger().isEnabledFor(logging.INFO):
-        print_test_output(results, detailed=detailed)
+    if logging.getLogger().isEnabledFor(logging.INFO) or detailed:
+        print_test_output(results)
 
     return all(result.success for result in results), results
 
@@ -471,7 +471,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         "path", type=str, nargs="+", help="Path(s) to test (course, part or assignment)"
     )
     test_grp.add_argument(
-        "--verbose", "-v", action="store_true", help="Show more details"
+        "--details", action="store_true", help="Show more details about test results"
     )
 
     # UPDATE
@@ -509,7 +509,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                         path.parent.parent, path.parent.name, path.name, language
                     )
         if args.action == "test":
-            all_passed = test([Path(path) for path in args.path], detailed=args.verbose)
+            all_passed, _ = test(
+                [Path(path) for path in args.path], detailed=args.details
+            )
             if not all_passed:
                 return 1
         if args.action == "update":
