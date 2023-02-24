@@ -355,7 +355,7 @@ def print_test_output(results: list[TestResult], detailed: bool = False) -> None
     tree.show()
 
 
-def test(paths: list[Path], detailed: bool = False) -> bool:
+def test(paths: list[Path], detailed: bool = False) -> tuple[bool, list[TestResult]]:
     logging.debug("Collecting assignments")
     tasks: list[TestTask] = list(collect_tasks(paths))
 
@@ -375,7 +375,7 @@ def test(paths: list[Path], detailed: bool = False) -> bool:
     if logging.getLogger().isEnabledFor(logging.INFO):
         print_test_output(results, detailed=detailed)
 
-    return all(result.success for t in results)
+    return all(result.success for result in results), results
 
 
 @contextlib.contextmanager

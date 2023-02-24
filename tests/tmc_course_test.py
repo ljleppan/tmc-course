@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from unittest.mock import ANY, call, patch
 
 import pytest
@@ -149,6 +150,11 @@ def test_is_valid_part_checks_exists(tmp_course):
 def test_is_valid_part_checks_is_dir(tmp_course):
     (tmp_course / "file.txt").touch()
     assert not tmc_course.is_valid_part(tmp_course / "file.txt")
+
+
+def test_is_valid_part_in_course(tmp_path):
+    (tmp_path / "course" / "part01").mkdir(parents=True, exist_ok=True)
+    assert not tmc_course.is_valid_part(tmp_path / "course" / "part01")
 
 
 def test_create_src_skeleton_fi(tmp_path, test_resource_dir):
@@ -317,6 +323,18 @@ def test_init_assignment_en(test_resource_dir, tmp_part):
         tmp_part / "valid_assignment_en",
         ignore=["__pycache__"],
     )
+
+
+def test_init_assignment_invalid_part(tmp_course):
+    (tmp_course / "part1.txt").touch()
+    with pytest.raises(ValueError):
+        tmc_course.init_assignment(tmp_course, "part1.txt", "assg1", "fi")
+
+
+def test_init_assignment_invalid_course(tmp_path):
+    (tmp_path / "course" / "part1").mkdir(parents=True, exist_ok=True)
+    with pytest.raises(ValueError):
+        tmc_course.init_assignment(tmp_path / "course", "part1", "assg1", "fi")
 
 
 @responses.activate
@@ -553,3 +571,123 @@ def test_verbosity_debug():
         with patch.object(tmc_course.logging, "basicConfig") as mock_logging:
             tmc_course.main(["--debug", "update", "nosuchcourse"])
             mock_logging.assert_called_once_with(format=ANY, level=logging.DEBUG)
+
+
+def test_test_task_properties():
+    task = tmc_course.TestTask(Path("Course/Part/Assignment"))
+    assert task.course_path == Path("Course")
+    assert task.part_path == Path("Course/Part")
+
+
+def test_collect_tasks(test_resource_dir):
+    tasks = list(
+        tmc_course.collect_tasks(
+            [
+                test_resource_dir / "test_runner_test_all_pass",
+                test_resource_dir / "test_runner_test_some_pass",
+                test_resource_dir / "test_runner_test_all_fail" / "part01",
+            ]
+        )
+    )
+    assert len(tasks) == 10
+    assert set(task.path for task in tasks) == {
+        test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg01",
+        test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg02",
+        test_resource_dir / "test_runner_test_all_pass" / "part02" / "assg03",
+        test_resource_dir / "test_runner_test_all_pass" / "part02" / "assg04",
+        test_resource_dir / "test_runner_test_some_pass" / "part01" / "assg01",
+        test_resource_dir / "test_runner_test_some_pass" / "part01" / "assg02",
+        test_resource_dir / "test_runner_test_some_pass" / "part02" / "assg03",
+        test_resource_dir / "test_runner_test_some_pass" / "part02" / "assg04",
+        test_resource_dir / "test_runner_test_all_fail" / "part01" / "assg01",
+        test_resource_dir / "test_runner_test_all_fail" / "part01" / "assg02",
+    }
+
+
+def test_collect_tasks_invalid(tmp_path):
+    tasks = list(tmc_course.collect_tasks([tmp_path]))
+    assert len(tasks) == 0
+
+
+def test_test_course(test_resource_dir):
+    success, results = tmc_course.test(
+        [test_resource_dir / "test_runner_test_all_pass"]
+    )
+    assert success
+    assert len(results) == 4
+
+
+def test_test_part(test_resource_dir):
+    success, results = tmc_course.test(
+        [test_resource_dir / "test_runner_test_all_pass" / "part01"]
+    )
+    assert success
+    assert len(results) == 2
+
+
+def test_test_assg(test_resource_dir):
+    success, results = tmc_course.test(
+        [test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg01"]
+    )
+    assert success
+    assert len(results) == 1
+
+
+def test_test_multiple_assgs(test_resource_dir):
+    success, results = tmc_course.test(
+        [
+            test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg01",
+            test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg02",
+        ]
+    )
+    assert success
+    assert len(results) == 2
+
+
+def test_test_multiple_parts(test_resource_dir):
+    success, results = tmc_course.test(
+        [
+            test_resource_dir / "test_runner_test_all_pass" / "part01",
+            test_resource_dir / "test_runner_test_all_pass" / "part02",
+        ]
+    )
+    assert success
+    assert len(results) == 4
+
+
+def test_test_multiple_mixture(test_resource_dir):
+    success, results = tmc_course.test(
+        [
+            test_resource_dir / "test_runner_test_all_pass" / "part01",
+            test_resource_dir / "test_runner_test_all_pass" / "part02" / "assg03",
+        ]
+    )
+    assert success
+    assert len(results) == 3
+
+
+def test_test_all_fail(test_resource_dir):
+    success, results = tmc_course.test(
+        [test_resource_dir / "test_runner_test_all_fail"]
+    )
+    assert not success
+    assert len(results) == 4
+
+
+def test_test_some_pass(test_resource_dir):
+    success, results = tmc_course.test(
+        [test_resource_dir / "test_runner_test_some_pass"]
+    )
+    assert not success
+    assert len(results) == 4
+
+
+def test_test_multi(test_resource_dir):
+    success, results = tmc_course.test(
+        [
+            test_resource_dir / "test_runner_test_some_pass",
+            test_resource_dir / "test_runner_test_all_pass",
+        ]
+    )
+    assert not success
+    assert len(results) == 8
