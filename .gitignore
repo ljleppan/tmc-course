@@ -12,3 +12,4 @@ config.ini
 .tox
 .vscode
 build/
+*.tmc_test_results.json
