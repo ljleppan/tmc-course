@@ -27,7 +27,8 @@ keywords = ["TestMyCode", "TMC", "helper", "teacher", "tool"]
 requires-python = ">=3.8"
 dependencies = [
     "requests >= 2.28.2",
-    "treelib >= 1.6.1"
+    "treelib >= 1.6.1",
+    "tqdm >= 4.64.1"
 ]
 
 [project.urls]

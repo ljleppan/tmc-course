@@ -14,6 +14,7 @@ from typing import Generator, Literal, Optional
 
 import requests
 import treelib  # type: ignore
+from tqdm import tqdm
 
 TMC_PYTHON_TESTER_ZIP_URL = (
     "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
@@ -345,9 +346,11 @@ def print_test_output(results: list[TestResult]) -> None:
         tree.create_node(part_path.name, part_path, parent=part_path.parent)
 
     for idx, result in enumerate(results):
-        affix = "SUCCESS" if result.success else "FAIL"
+        affix = (
+            "\x1b[32;1mSUCCESS\x1b[0m" if result.success else "\x1b[31;1mFAIL\x1b[0m"
+        )
         tree.create_node(
-            f"{result.task.path.name} -- {affix}",
+            f"{result.task.path.name} - {affix}",
             result.task.path,
             parent=result.task.part_path,
         )
@@ -359,8 +362,12 @@ def test(paths: list[Path], detailed: bool = False) -> tuple[bool, list[TestResu
     logging.debug("Collecting assignments")
     tasks: list[TestTask] = list(collect_tasks(paths))
 
+    results: list[TestResult] = []
     logging.debug("Running tests")
-    results = [run_test_task(task) for task in tasks]
+    for task in tqdm(
+        tasks, unit=" assg", disable=not logging.getLogger().isEnabledFor(logging.INFO)
+    ):
+        results.append(run_test_task(task))
 
     for result in results:
         if detailed or not result.success:
@@ -372,10 +379,15 @@ def test(paths: list[Path], detailed: bool = False) -> tuple[bool, list[TestResu
             logging.info(tabbed_stderr)
     logging.info("\n")
 
+    all_passed = all(result.success for result in results)
     if logging.getLogger().isEnabledFor(logging.INFO) or detailed:
         print_test_output(results)
+    if all_passed:
+        logging.info("\x1b[32;1mALL TEST PASSED\x1b[0m")
+    else:
+        logging.warning("\x1b[31;1mSOME TESTS FAILED\x1b[0m")
 
-    return all(result.success for result in results), results
+    return all_passed, results
 
 
 @contextlib.contextmanager

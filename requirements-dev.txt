@@ -9,6 +9,7 @@ pre-commit
 pytest
 responses
 tox
-types-setuptools
 types-requests
+types-setuptools
+types-tqdm
 wheel
