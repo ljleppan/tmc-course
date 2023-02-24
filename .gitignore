@@ -13,3 +13,4 @@ config.ini
 .vscode
 build/
 *.tmc_test_results.json
+dist/
