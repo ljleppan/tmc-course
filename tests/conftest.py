@@ -7,7 +7,7 @@ from tmc_course import tmc_course
 
 
 @pytest.fixture
-def test_resource_dir() -> Path:
+def test_resource_path() -> Path:
     return testing.util.test_resource_dir()
 
 

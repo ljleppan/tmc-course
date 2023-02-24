@@ -1,4 +1,5 @@
 import logging
+import shutil
 from pathlib import Path
 from unittest.mock import ANY, call, patch
 
@@ -95,8 +96,8 @@ def test_init_course_valid_name(tmp_path, name):
     tmc_course.init_course(tmp_path / name)
 
 
-def test_is_valid_course(test_resource_dir):
-    assert tmc_course.is_valid_course(test_resource_dir / "valid_course")
+def test_is_valid_course(test_resource_path):
+    assert tmc_course.is_valid_course(test_resource_path / "valid_course")
 
 
 def test_is_valid_course_nonexistant(tmp_path):
@@ -139,8 +140,8 @@ def test_init_part_checks_if_exists(tmp_course):
         mock.assert_called_once()
 
 
-def test_is_valid_part(test_resource_dir):
-    assert tmc_course.is_valid_part(test_resource_dir / "valid_course" / "valid_part")
+def test_is_valid_part(test_resource_path):
+    assert tmc_course.is_valid_part(test_resource_path / "valid_course" / "valid_part")
 
 
 def test_is_valid_part_checks_exists(tmp_course):
@@ -157,12 +158,12 @@ def test_is_valid_part_in_course(tmp_path):
     assert not tmc_course.is_valid_part(tmp_path / "course" / "part01")
 
 
-def test_create_src_skeleton_fi(tmp_path, test_resource_dir):
+def test_create_src_skeleton_fi(tmp_path, test_resource_path):
     tmc_course.create_src_skeleton(tmp_path, "fi")
 
     solution_file = tmp_path / "src" / "ratkaisu.py"
     expected = (
-        test_resource_dir
+        test_resource_path
         / "valid_course"
         / "valid_part"
         / "valid_assignment_fi"
@@ -177,12 +178,12 @@ def test_create_src_skeleton_fi(tmp_path, test_resource_dir):
     assert init_py.read_text() == ""
 
 
-def test_create_src_skeleton_en(tmp_path, test_resource_dir):
+def test_create_src_skeleton_en(tmp_path, test_resource_path):
     tmc_course.create_src_skeleton(tmp_path, "en")
 
     solution_file = tmp_path / "src" / "solution.py"
     expected = (
-        test_resource_dir
+        test_resource_path
         / "valid_course"
         / "valid_part"
         / "valid_assignment_en"
@@ -202,12 +203,12 @@ def test_create_src_skeleton_invalid_language(tmp_path):
         tmc_course.create_src_skeleton(tmp_path, "nosuchlanguage")
 
 
-def test_create_test_skeleton_fi(tmp_path, test_resource_dir):
+def test_create_test_skeleton_fi(tmp_path, test_resource_path):
     tmc_course.create_test_skeleton(tmp_path, "valid_assignment_fi", "fi")
 
     test_file = tmp_path / "test" / "test_ratkaisu.py"
     expected = (
-        test_resource_dir
+        test_resource_path
         / "valid_course"
         / "valid_part"
         / "valid_assignment_fi"
@@ -222,12 +223,12 @@ def test_create_test_skeleton_fi(tmp_path, test_resource_dir):
     assert init_py.read_text() == ""
 
 
-def test_create_test_skeleton_en(tmp_path, test_resource_dir):
+def test_create_test_skeleton_en(tmp_path, test_resource_path):
     tmc_course.create_test_skeleton(tmp_path, "valid_assignment_en", "en")
 
     test_file = tmp_path / "test" / "test_solution.py"
     expected = (
-        test_resource_dir
+        test_resource_path
         / "valid_course"
         / "valid_part"
         / "valid_assignment_en"
@@ -248,11 +249,11 @@ def test_create_test_skeleton_invalid_language(tmp_path):
 
 
 @responses.activate
-def test_download_tmc_python_tester(test_resource_dir, tmp_path):
+def test_download_tmc_python_tester(test_resource_path, tmp_path):
     url = (
         "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
     )
-    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    zip_resource = test_resource_path / "tmc-python-tester.zip"
     with zip_resource.open("rb") as zip_handle:
         responses.get(url=url, body=zip_handle.read())
         tmc_course.download_tmc_python_tester(tmp_path, update=True)
@@ -268,13 +269,13 @@ def test_download_tmc_python_tester_skips_no_update(tmp_path):
 
 
 @responses.activate
-def test_download_tmc_python_tester_updates(test_resource_dir, tmp_path):
+def test_download_tmc_python_tester_updates(test_resource_path, tmp_path):
     (tmp_path / "tmc-python-tester.zip").touch()
 
     url = (
         "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
     )
-    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    zip_resource = test_resource_path / "tmc-python-tester.zip"
     with zip_resource.open("rb") as zip_handle:
         responses.get(url=url, body=zip_handle.read())
         tmc_course.download_tmc_python_tester(tmp_path, update=True)
@@ -284,9 +285,9 @@ def test_download_tmc_python_tester_updates(test_resource_dir, tmp_path):
 
 
 @responses.activate
-def test_create_tmc_dir(test_resource_dir, tmp_part):
+def test_create_tmc_dir(test_resource_path, tmp_part):
     expected_path = (
-        test_resource_dir
+        test_resource_path
         / "valid_course"
         / "valid_part"
         / "valid_assignment_en"
@@ -298,7 +299,7 @@ def test_create_tmc_dir(test_resource_dir, tmp_part):
     url = (
         "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
     )
-    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    zip_resource = test_resource_path / "tmc-python-tester.zip"
     with zip_resource.open("rb") as zip_handle:
         responses.get(url=url, body=zip_handle.read())
         tmc_course.create_tmc_dir(assg_path)
@@ -307,11 +308,11 @@ def test_create_tmc_dir(test_resource_dir, tmp_part):
 
 
 @responses.activate
-def test_init_assignment_en(test_resource_dir, tmp_part):
+def test_init_assignment_en(test_resource_path, tmp_part):
     url = (
         "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
     )
-    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    zip_resource = test_resource_path / "tmc-python-tester.zip"
     with zip_resource.open("rb") as zip_handle:
         responses.get(url=url, body=zip_handle.read())
         tmc_course.init_assignment(
@@ -319,7 +320,7 @@ def test_init_assignment_en(test_resource_dir, tmp_part):
         )
 
     assert_dir_equals(
-        test_resource_dir / "valid_course" / "valid_part" / "valid_assignment_en",
+        test_resource_path / "valid_course" / "valid_part" / "valid_assignment_en",
         tmp_part / "valid_assignment_en",
         ignore=["__pycache__"],
     )
@@ -338,11 +339,11 @@ def test_init_assignment_invalid_course(tmp_path):
 
 
 @responses.activate
-def test_init_assignment_fi(test_resource_dir, tmp_part):
+def test_init_assignment_fi(test_resource_path, tmp_part):
     url = (
         "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
     )
-    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    zip_resource = test_resource_path / "tmc-python-tester.zip"
     with zip_resource.open("rb") as zip_handle:
         responses.get(url=url, body=zip_handle.read())
         tmc_course.init_assignment(
@@ -350,7 +351,7 @@ def test_init_assignment_fi(test_resource_dir, tmp_part):
         )
 
     assert_dir_equals(
-        test_resource_dir / "valid_course" / "valid_part" / "valid_assignment_fi",
+        test_resource_path / "valid_course" / "valid_part" / "valid_assignment_fi",
         tmp_part / "valid_assignment_fi",
         ignore=["__pycache__"],
     )
@@ -369,9 +370,9 @@ def test_init_assignment_tgt_exists_asks_user(tmp_part):
         mock.assert_called_once()
 
 
-def test_is_valid_assignment(test_resource_dir):
+def test_is_valid_assignment(test_resource_path):
     assert tmc_course.is_valid_assignment(
-        test_resource_dir / "valid_course" / "valid_part" / "valid_assignment_en"
+        test_resource_path / "valid_course" / "valid_part" / "valid_assignment_en"
     )
 
 
@@ -390,11 +391,11 @@ def test_is_valid_assignment_no_tmcprojectyml(tmp_path):
 
 
 @responses.activate
-def test_update_course(tmp_course, test_resource_dir):
+def test_update_course(tmp_course, test_resource_path):
     url = (
         "https://github.com/testmycode/tmc-python-tester/archive/refs/heads/master.zip"
     )
-    zip_resource = test_resource_dir / "tmc-python-tester.zip"
+    zip_resource = test_resource_path / "tmc-python-tester.zip"
     with zip_resource.open("rb") as zip_handle:
         responses.get(url=url, body=zip_handle.read())
 
@@ -439,7 +440,7 @@ def test_update_course(tmp_course, test_resource_dir):
 
     # Updates all in a part
     assert_dir_equals(
-        test_resource_dir
+        test_resource_path
         / "valid_course"
         / "valid_part"
         / "valid_assignment_fi"
@@ -448,7 +449,7 @@ def test_update_course(tmp_course, test_resource_dir):
         ignore=["__pycache__"],
     )
     assert_dir_equals(
-        test_resource_dir
+        test_resource_path
         / "valid_course"
         / "valid_part"
         / "valid_assignment_en"
@@ -457,7 +458,7 @@ def test_update_course(tmp_course, test_resource_dir):
         ignore=["__pycache__"],
     )
     assert_dir_equals(
-        test_resource_dir
+        test_resource_path
         / "valid_course"
         / "valid_part"
         / "valid_assignment_en"
@@ -468,7 +469,7 @@ def test_update_course(tmp_course, test_resource_dir):
 
     # Updates all parts
     assert_dir_equals(
-        test_resource_dir
+        test_resource_path
         / "valid_course"
         / "valid_part"
         / "valid_assignment_en"
@@ -579,28 +580,28 @@ def test_test_task_properties():
     assert task.part_path == Path("Course/Part")
 
 
-def test_collect_tasks(test_resource_dir):
+def test_collect_tasks(test_resource_path):
     tasks = list(
         tmc_course.collect_tasks(
             [
-                test_resource_dir / "test_runner_test_all_pass",
-                test_resource_dir / "test_runner_test_some_pass",
-                test_resource_dir / "test_runner_test_all_fail" / "part01",
+                test_resource_path / "test_runner_test_all_pass",
+                test_resource_path / "test_runner_test_some_pass",
+                test_resource_path / "test_runner_test_all_fail" / "part01",
             ]
         )
     )
     assert len(tasks) == 10
     assert set(task.path for task in tasks) == {
-        test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg01",
-        test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg02",
-        test_resource_dir / "test_runner_test_all_pass" / "part02" / "assg03",
-        test_resource_dir / "test_runner_test_all_pass" / "part02" / "assg04",
-        test_resource_dir / "test_runner_test_some_pass" / "part01" / "assg01",
-        test_resource_dir / "test_runner_test_some_pass" / "part01" / "assg02",
-        test_resource_dir / "test_runner_test_some_pass" / "part02" / "assg03",
-        test_resource_dir / "test_runner_test_some_pass" / "part02" / "assg04",
-        test_resource_dir / "test_runner_test_all_fail" / "part01" / "assg01",
-        test_resource_dir / "test_runner_test_all_fail" / "part01" / "assg02",
+        test_resource_path / "test_runner_test_all_pass" / "part01" / "assg01",
+        test_resource_path / "test_runner_test_all_pass" / "part01" / "assg02",
+        test_resource_path / "test_runner_test_all_pass" / "part02" / "assg03",
+        test_resource_path / "test_runner_test_all_pass" / "part02" / "assg04",
+        test_resource_path / "test_runner_test_some_pass" / "part01" / "assg01",
+        test_resource_path / "test_runner_test_some_pass" / "part01" / "assg02",
+        test_resource_path / "test_runner_test_some_pass" / "part02" / "assg03",
+        test_resource_path / "test_runner_test_some_pass" / "part02" / "assg04",
+        test_resource_path / "test_runner_test_all_fail" / "part01" / "assg01",
+        test_resource_path / "test_runner_test_all_fail" / "part01" / "assg02",
     }
 
 
@@ -609,84 +610,125 @@ def test_collect_tasks_invalid(tmp_path):
     assert len(tasks) == 0
 
 
-def test_test_course(test_resource_dir):
-    success, results = tmc_course.test(
-        [test_resource_dir / "test_runner_test_all_pass"]
+def run_test_task_invalid_path(tmp_path):
+    with pytest.raises(ValueError):
+        tmc_course.run_test_task(tmc_course.TestTask(tmp_path / "no_such"))
+
+
+def test_test_course(test_resource_path, tmp_path):
+    shutil.copytree(
+        test_resource_path / "test_runner_test_all_pass",
+        tmp_path / "test_runner_test_all_pass",
     )
+    success, results = tmc_course.test([tmp_path / "test_runner_test_all_pass"])
     assert success
     assert len(results) == 4
 
 
-def test_test_part(test_resource_dir):
+def test_test_part(test_resource_path, tmp_path):
+    shutil.copytree(
+        test_resource_path / "test_runner_test_all_pass",
+        tmp_path / "test_runner_test_all_pass",
+    )
     success, results = tmc_course.test(
-        [test_resource_dir / "test_runner_test_all_pass" / "part01"]
+        [tmp_path / "test_runner_test_all_pass" / "part01"]
     )
     assert success
     assert len(results) == 2
 
 
-def test_test_assg(test_resource_dir):
+def test_test_assg(test_resource_path, tmp_path):
+    shutil.copytree(
+        test_resource_path / "test_runner_test_all_pass",
+        tmp_path / "test_runner_test_all_pass",
+    )
     success, results = tmc_course.test(
-        [test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg01"]
+        [tmp_path / "test_runner_test_all_pass" / "part01" / "assg01"]
     )
     assert success
     assert len(results) == 1
 
 
-def test_test_multiple_assgs(test_resource_dir):
+def test_test_multiple_assgs(test_resource_path, tmp_path):
+    shutil.copytree(
+        test_resource_path / "test_runner_test_all_pass",
+        tmp_path / "test_runner_test_all_pass",
+    )
     success, results = tmc_course.test(
         [
-            test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg01",
-            test_resource_dir / "test_runner_test_all_pass" / "part01" / "assg02",
+            tmp_path / "test_runner_test_all_pass" / "part01" / "assg01",
+            tmp_path / "test_runner_test_all_pass" / "part01" / "assg02",
         ]
     )
     assert success
     assert len(results) == 2
 
 
-def test_test_multiple_parts(test_resource_dir):
+def test_test_multiple_parts(test_resource_path, tmp_path):
+    shutil.copytree(
+        test_resource_path / "test_runner_test_all_pass",
+        tmp_path / "test_runner_test_all_pass",
+    )
     success, results = tmc_course.test(
         [
-            test_resource_dir / "test_runner_test_all_pass" / "part01",
-            test_resource_dir / "test_runner_test_all_pass" / "part02",
+            tmp_path / "test_runner_test_all_pass" / "part01",
+            tmp_path / "test_runner_test_all_pass" / "part02",
         ]
     )
     assert success
     assert len(results) == 4
 
 
-def test_test_multiple_mixture(test_resource_dir):
+def test_test_multiple_mixture(test_resource_path, tmp_path):
+    shutil.copytree(
+        test_resource_path / "test_runner_test_all_pass",
+        tmp_path / "test_runner_test_all_pass",
+    )
     success, results = tmc_course.test(
         [
-            test_resource_dir / "test_runner_test_all_pass" / "part01",
-            test_resource_dir / "test_runner_test_all_pass" / "part02" / "assg03",
+            tmp_path / "test_runner_test_all_pass" / "part01",
+            tmp_path / "test_runner_test_all_pass" / "part02" / "assg03",
         ]
     )
     assert success
     assert len(results) == 3
 
 
-def test_test_all_fail(test_resource_dir):
+def test_test_all_fail(test_resource_path, tmp_path):
+    shutil.copytree(
+        test_resource_path / "test_runner_test_all_fail",
+        tmp_path / "test_runner_test_all_fail",
+    )
     success, results = tmc_course.test(
-        [test_resource_dir / "test_runner_test_all_fail"]
+        [test_resource_path / "test_runner_test_all_fail"]
     )
     assert not success
     assert len(results) == 4
 
 
-def test_test_some_pass(test_resource_dir):
-    success, results = tmc_course.test(
-        [test_resource_dir / "test_runner_test_some_pass"]
+def test_test_some_pass(test_resource_path, tmp_path):
+    shutil.copytree(
+        test_resource_path / "test_runner_test_some_pass",
+        tmp_path / "test_runner_test_some_pass",
     )
+    success, results = tmc_course.test([tmp_path / "test_runner_test_some_pass"])
     assert not success
     assert len(results) == 4
 
 
-def test_test_multi(test_resource_dir):
+def test_test_multi(test_resource_path, tmp_path):
+    shutil.copytree(
+        test_resource_path / "test_runner_test_some_pass",
+        tmp_path / "test_runner_test_some_pass",
+    )
+    shutil.copytree(
+        test_resource_path / "test_runner_test_all_pass",
+        tmp_path / "test_runner_test_all_pass",
+    )
     success, results = tmc_course.test(
         [
-            test_resource_dir / "test_runner_test_some_pass",
-            test_resource_dir / "test_runner_test_all_pass",
+            tmp_path / "test_runner_test_some_pass",
+            tmp_path / "test_runner_test_all_pass",
         ]
     )
     assert not success
