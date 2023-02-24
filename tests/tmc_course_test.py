@@ -733,3 +733,33 @@ def test_test_multi(test_resource_path, tmp_path):
     )
     assert not success
     assert len(results) == 8
+
+
+def test_main_test(tmp_course):
+    paths = [tmp_course / "part01", tmp_course / "part02"]
+    with patch.object(tmc_course, "test") as mock:
+        mock.return_value = (True, [])
+        res = tmc_course.main(["test", str(paths[0]), str(paths[1])])
+        mock.assert_called_once_with(
+            [
+                paths[0],
+                paths[1],
+            ],
+            detailed=False,
+        )
+        assert res == 0
+
+
+def test_main_test_detailed(tmp_course):
+    paths = [tmp_course / "part01", tmp_course / "part02"]
+    with patch.object(tmc_course, "test") as mock:
+        mock.return_value = (False, [])
+        res = tmc_course.main(["test", str(paths[0]), str(paths[1]), "--details"])
+        mock.assert_called_once_with(
+            [
+                paths[0],
+                paths[1],
+            ],
+            detailed=True,
+        )
+        assert res == 1
