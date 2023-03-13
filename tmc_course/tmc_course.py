@@ -540,7 +540,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     try:
         if args.action == "init":
-            paths = [Path(path) for path in args.path]
+            paths = [Path(path).resolve() for path in args.path]
             if not paths:
                 paths = [Path(os.getcwd()).resolve()]
             if args.init_action == "course":
@@ -556,13 +556,15 @@ def main(argv: Optional[list[str]] = None) -> int:
                         path.parent.parent, path.parent.name, path.name, language
                     )
         if args.action == "test":
-            all_passed, _ = test(
-                [Path(path) for path in args.path], detailed=args.details
-            )
+            paths = [Path(path).resolve() for path in args.path]
+            if not paths:
+                paths = [Path(os.getcwd()).resolve()]
+            all_passed, _ = test(paths, detailed=args.details)
             if not all_passed:
                 return 1
         if args.action == "update":
-            update_course(Path(args.path))
+            path = Path(args.path) if args.path else Path(os.getcwd())
+            update_course(path.resolve())
     except ActionCancelledException:
         print("OK, quitting")
         return 1
