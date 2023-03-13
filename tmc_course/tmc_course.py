@@ -55,6 +55,7 @@ def check_from_user(
 
 
 def add_skeleton_file(skeleton_file: SkeletonFile, path: Path) -> None:
+    path = path.resolve()
     logging.debug(f"Copying resource {skeleton_file.name} to {path}")
     template_file_name = skeleton_file.name.casefold() + ".template"
     resource_path = importlib.resources.files("tmc_course.resources").joinpath(
@@ -65,6 +66,7 @@ def add_skeleton_file(skeleton_file: SkeletonFile, path: Path) -> None:
 
 
 def init_course(course_path: Path) -> None:
+    course_path = course_path.resolve()
     logging.info(f"Initializing a new course in {course_path}")
     if course_path.exists():
         check_from_user(
@@ -84,6 +86,8 @@ def init_course(course_path: Path) -> None:
 
 
 def is_valid_course(course_path: Path) -> bool:
+    course_path = course_path.resolve()
+
     if not course_path.exists():
         logging.debug("Course root directory does not exist")
         return False
@@ -102,6 +106,8 @@ def is_valid_course(course_path: Path) -> bool:
 
 
 def init_part(course_path: Path, part_name: str) -> None:
+    course_path = course_path.resolve()
+
     if not is_valid_course(course_path):
         raise ValueError(f"{course_path} is not a TMC course")
 
@@ -120,6 +126,8 @@ def init_part(course_path: Path, part_name: str) -> None:
 
 
 def is_valid_part(part: Path) -> bool:
+    part = part.resolve()
+
     if not part.exists():
         logging.debug("Part {part_name} does not exist")
         return False
@@ -134,6 +142,7 @@ def is_valid_part(part: Path) -> bool:
 
 
 def create_src_skeleton(assignment_path: Path, language: Literal["en", "fi"]) -> None:
+    assignment_path = assignment_path.resolve()
     if language not in ("fi", "en"):
         raise ValueError("Language must be 'fi' or 'en'")
 
@@ -158,6 +167,7 @@ def create_src_skeleton(assignment_path: Path, language: Literal["en", "fi"]) ->
 def create_test_skeleton(
     assignment_path: Path, assignment_name: str, language: Literal["en", "fi"]
 ) -> None:
+    assignment_path = assignment_path.resolve()
     logging.debug(f'Creating {assignment_path / "test"}')
     (assignment_path / "test").mkdir(exist_ok=True)
 
@@ -183,6 +193,7 @@ def create_test_skeleton(
 
 
 def download_tmc_python_tester(course_path: Path, update: bool) -> None:
+    course_path = course_path.resolve()
     tester_zip_path = course_path / "tmc-python-tester.zip"
     logging.debug(
         f'Looking for TMC-python-tester zip at {course_path / "tmc-python-tester.zip"}'
@@ -198,6 +209,7 @@ def download_tmc_python_tester(course_path: Path, update: bool) -> None:
 
 
 def create_tmc_dir(assignment_path: Path) -> None:
+    assignment_path = assignment_path.resolve()
     logging.debug(f'Creating {assignment_path / "tmc"}')
     (assignment_path / "tmc").mkdir(exist_ok=True)
 
@@ -224,6 +236,7 @@ def init_assignment(
     assignment_name: str,
     language: Literal["fi", "en"],
 ) -> None:
+    course_path = course_path.resolve()
     if not is_valid_course(course_path):
         raise ValueError(f"{course_path} is not a valid TMC course")
     if not is_valid_part(course_path / part_name):
@@ -251,6 +264,7 @@ def init_assignment(
 
 
 def is_valid_assignment(assignment_path: Path) -> bool:
+    assignment_path = assignment_path.resolve()
     if not assignment_path.exists():
         logging.debug(f"Assignment {assignment_path} does not exist")
         return False
@@ -266,6 +280,7 @@ def is_valid_assignment(assignment_path: Path) -> bool:
 
 
 def update_course(course_path: Path) -> None:
+    course_path = course_path.resolve()
     logging.info(f"Updating TMC-python-tester for course {course_path}")
     download_tmc_python_tester(course_path, update=True)
     is_valid_course(course_path)
@@ -305,6 +320,7 @@ class TestResult:
 
 
 def collect_tasks(paths: list[Path]) -> Generator[TestTask, None, None]:
+    paths = [p.resolve() for p in paths]
     for path in paths:
         if is_valid_assignment(path):
             logging.debug(f"{path} is assignment")
@@ -359,6 +375,7 @@ def print_test_output(results: list[TestResult]) -> None:
 
 
 def test(paths: list[Path], detailed: bool = False) -> tuple[bool, list[TestResult]]:
+    paths = [p.resolve() for p in paths]
     logging.debug("Collecting assignments")
     tasks: list[TestTask] = list(collect_tasks(paths))
 
@@ -401,7 +418,7 @@ def cwd(path: Path) -> Generator[None, None, None]:
 
 
 def run_test_task(task: TestTask) -> TestResult:
-    assignment_path = task.path.absolute()
+    assignment_path = task.path.resolve()
     logging.debug(f"Running tests for {assignment_path}")
     if not is_valid_assignment(assignment_path):
         raise ValueError(f"{assignment_path} is not a valid TMC assignment")
