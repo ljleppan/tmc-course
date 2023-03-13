@@ -509,8 +509,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     update_grp.add_argument("path", type=str, help="Course root directory")
 
-    # Verbosity control
+    # Parse arguments
     args = parser.parse_args(argv)
+
+    # Verbosity control
     if not (args.quiet or args.debug):
         logging.basicConfig(format="%(message)s", level=logging.INFO)
     if args.quiet:
