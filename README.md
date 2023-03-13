@@ -104,7 +104,7 @@ their tests. Use `--details` to show additional help.
 To use `tmc-course` as a `pre-commit` hook, add the the following config:
 ```
   - repo: https://github.com/ljleppan/tmc-course
-    rev: 1.0.0b2
+    rev: v1.0.0b4
     hooks:
       - id: tmc-course
 ```
