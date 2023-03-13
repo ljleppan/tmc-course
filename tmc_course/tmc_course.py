@@ -504,7 +504,6 @@ def main(argv: Optional[list[str]] = None) -> int:
     test_grp = actions.add_parser("test", help="Test a new course, part or assignment")
     test_grp.add_argument(
         "path",
-        default=os.getcwd(),
         type=str,
         nargs="*",
         help="Path(s) to test (course, part or assignment);"
