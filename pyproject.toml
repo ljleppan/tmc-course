@@ -61,7 +61,8 @@ tmc-course = "tmc_course.tmc_course:main"
 exclude = [
     "tests*",
     "testing*",
-    "*/resources*"
+    "*/resources*",
+    "venv*"
 ]
 
 [tool.setuptools.package-data]
