@@ -470,13 +470,16 @@ def main(argv: Optional[list[str]] = None) -> int:
     # INIT COURSE
     init_course_grp = init_actions.add_parser("course", help="Initialize a new course")
     init_course_grp.add_argument(
-        "path", type=str, nargs="+", help="Path(s) of the new course(s)"
+        "path",
+        type=str,
+        nargs="*",
+        help="Path(s) of the new course(s); defaults to CWD if not given",
     )
 
     # INIT PART
     init_part_grp = init_actions.add_parser("part", help="Initialize a new course part")
     init_part_grp.add_argument(
-        "path", type=str, nargs="+", help="Path(s) of the new part(s)"
+        "path", type=str, nargs="*", help="Path(s) of the new part(s)"
     )
 
     # INIT ASSIGNMENT
@@ -484,7 +487,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         "assignment", help="Initialize a assignment"
     )
     init_assignment_grp.add_argument(
-        "path", type=str, nargs="+", help="Path(s) of the new assignment(s)"
+        "path",
+        type=str,
+        nargs="*",
+        help="Path(s) of the new assignment(s); defaults to CWD if not given",
     )
     language_grp = init_assignment_grp.add_mutually_exclusive_group(required=True)
     language_grp.add_argument(
@@ -497,7 +503,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     # TEST
     test_grp = actions.add_parser("test", help="Test a new course, part or assignment")
     test_grp.add_argument(
-        "path", type=str, nargs="+", help="Path(s) to test (course, part or assignment)"
+        "path",
+        default=os.getcwd(),
+        type=str,
+        nargs="*",
+        help="Path(s) to test (course, part or assignment);"
+        "defaults to CWD if not given",
     )
     test_grp.add_argument(
         "--details", action="store_true", help="Show more details about test results"
@@ -507,7 +518,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     update_grp = actions.add_parser(
         "update", help="Update TMC-python-runner embedded in assignments"
     )
-    update_grp.add_argument("path", type=str, help="Course root directory")
+    update_grp.add_argument(
+        "path",
+        type=str,
+        nargs="?",
+        help="Course root directory; defaults to CWD if not given",
+    )
 
     # Parse arguments
     args = parser.parse_args(argv)
@@ -524,7 +540,9 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     try:
         if args.action == "init":
-            paths = (Path(path) for path in args.path)
+            paths = [Path(path) for path in args.path]
+            if not paths:
+                paths = [Path(os.getcwd()).resolve()]
             if args.init_action == "course":
                 for path in paths:
                     init_course(path)
